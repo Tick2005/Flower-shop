@@ -1,29 +1,40 @@
 <?php
 include 'connection.php';
+$message = [];
 
 if (isset($_POST['submit-btn'])) {
-    // Lấy và lọc dữ liệu
     $name = mysqli_real_escape_string($conn, filter_var($_POST['name'], FILTER_SANITIZE_STRING));
     $email = mysqli_real_escape_string($conn, filter_var($_POST['email'], FILTER_SANITIZE_EMAIL));
-    $password = mysqli_real_escape_string($conn, filter_var($_POST['password'], FILTER_SANITIZE_STRING));
-    $cpassword = mysqli_real_escape_string($conn, filter_var($_POST['cpassword'], FILTER_SANITIZE_STRING));
+    $password = $_POST['password'];
+    $cpassword = $_POST['cpassword'];
 
-    // Kiểm tra người dùng đã tồn tại chưa
-    $select_user = mysqli_query($conn, "SELECT * FROM users WHERE email='$email'") or die('query failed');
-    if (mysqli_num_rows($select_user) > 0) {
-        $message[] = 'User already exists';
+    // Kiểm tra email tồn tại
+    $stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
+    $stmt->bind_param("s", $email);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        $message[] = 'User already exists!';
+    } elseif ($password !== $cpassword) {
+        $message[] = 'Passwords do not match!';
     } else {
-        if ($password != $cpassword) {
-            $message[] = 'Password and Confirm Password do not match';
-        } else {
-            mysqli_query($conn, "INSERT INTO users (name, email, password) VALUES ('$name', '$email', '$password')") or die('query failed');
-            $message[] = 'Register successfully!';
-            header('location: login.php');
-            exit();
-        }
+        // Mã hóa mật khẩu và chèn user mới
+        $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+        $default_type = 'user';
+        $default_status = 'Offline';
+
+        $insert_stmt = $conn->prepare("INSERT INTO users (name, email, password, user_type, status) VALUES (?, ?, ?, ?, ?)");
+        $insert_stmt->bind_param("sssss", $name, $email, $hashed_password, $default_type, $default_status);
+        $insert_stmt->execute();
+
+        $message[] = 'Register successfully!';
+        header("Location: login.php?registered=true");
+        exit();
     }
 }
 ?>
+
 
 <!DOCTYPE html>
 <html lang="en">
@@ -37,18 +48,6 @@ if (isset($_POST['submit-btn'])) {
     />
 </head>
 <body>
-    <?php
-       if(isset($message)) {
-        foreach($message as $message) {
-            echo ' 
-                <div class="message">
-                    <span>'.$message.'</span>
-                    <i class="bi bi-x-circle" onclick="this.parentElement.remove()"></i>
-                </div>
-            ';
-        }
-       }
-    ?>
     <section class="form-container">
         <form action="" method="post">
         <h1>Sign Up</h1>
@@ -68,9 +67,24 @@ if (isset($_POST['submit-btn'])) {
                     <input type="password" name="cpassword" placeholder="Confirm Password" required>
                     <i class="bx bxs-lock-alt"></i>
                 </div>
+                <?php
+                    if (!empty($message)) {
+                        foreach ($message as $msg) {
+                            echo '
+                            <div class="message">
+                                <p>' . htmlspecialchars($msg) . '</p>
+                            </div>';
+                        }
+                    }
+                ?>
         <button type="submit" name="submit-btn">Register</button>
         <p>Already have an account? <a href="login.php">Login here</a></p>
         </form>
     </section>
+    <script>
+    setTimeout(() => {
+        document.querySelectorAll('.message').forEach(msg => msg.remove());
+    }, 2000);
+</script>
 </body>
 </html>
