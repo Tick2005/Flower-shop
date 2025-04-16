@@ -9,6 +9,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css">
+    <title>Flora & Life</title>
     <style>
         header {
       background-color: #436B46;
@@ -81,7 +82,7 @@
         border-top: 2px solid #558759;
     }
         #home {
-            background-image: url(image/flower21.jpg);
+            background-image: url(image/background3.webp);
             background-size: cover;
             background-position: center;
             display: flex;
@@ -90,6 +91,7 @@
             justify-content: center;
             padding-right: 5%;
             text-align: justify;
+            color:rgb(235, 235, 235);
         }
 
         #home p {
@@ -294,12 +296,7 @@
 <header class="header">
     <div class="flex">
       <a href="index.php" class="logo">Flower <span>Shop</span></a>
-      <nav class="navbar" id="navbar">
-        <a href="#home">Home</a>
-        <a href="#about-us">About</a>
-        <a href="#product">Products</a>
-        <a href="#contact-us">Contacts</a>
-      </nav>
+        
       <div class="icons">
         <i class="fa-solid fa-cart-shopping" href="cart.php"></i>
         <i class="fa-regular fa-user" id="user-btn"></i>
