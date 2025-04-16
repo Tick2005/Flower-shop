@@ -11,13 +11,16 @@ body {
     justify-content: center;
     align-items: center;
     min-height: 100vh;
-    background: url(image/flower5.jpg) no-repeat center/cover;
+    background: url(image/background.webp);
+    background-size: cover;
+    background-position: center;
     color: white;
 }
 
 section form {
     width: 400px;
     background: rgba(255,255,255,.1);
+    -webkit-backdrop-filter: blur(15px);
     backdrop-filter: blur(15px);
     border-radius: 10px;
     padding: 30px 40px;
