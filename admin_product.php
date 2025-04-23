@@ -39,6 +39,8 @@ if (isset($_POST['add-product'])) {
     $product_price = $_POST['price'];
     $sale = $_POST['sale'];
     $product_detail = $_POST['detail'];
+    $origin = $_POST['origin']; // Thêm trường origin
+    $type = $_POST['type']; // Thêm trường type
     $image = $_FILES['image']['name'];
     $image_size = $_FILES['image']['size'];
     $image_tmp_name = $_FILES['image']['tmp_name'];
@@ -56,8 +58,8 @@ if (isset($_POST['add-product'])) {
         if ($result->num_rows > 0) {
             $message[] = 'Product name already exists.';
         } else {
-            $stmt = $conn->prepare("INSERT INTO products (name, price, sale, product_detail, image) VALUES (?, ?, ?, ?, ?)");
-            $stmt->bind_param("sdsss", $product_name, $product_price, $sale, $product_detail, $image);
+            $stmt = $conn->prepare("INSERT INTO products (name, price, sale, product_detail, origin, type, image) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("sdsssss", $product_name, $product_price, $sale, $product_detail, $origin, $type, $image);
             if ($stmt->execute()) {
                 if ($image_size > 2000000) {
                     $message[] = 'Product image size is too large.';
@@ -79,6 +81,8 @@ if (isset($_POST['update_product'])) {
     $update_price = $_POST['update_p_price'];
     $update_sale = $_POST['update_p_sale'];
     $update_detail = $_POST['update_p_detail'];
+    $update_origin = $_POST['update_p_origin']; // Thêm trường origin
+    $update_type = $_POST['update_p_type']; // Thêm trường type
 
     // Validate sale field (e.g., "10%" or empty)
     if (!empty($update_sale) && !preg_match('/^\d+%?$/', $update_sale)) {
@@ -89,11 +93,11 @@ if (isset($_POST['update_product'])) {
             $update_image_tmp = $_FILES['update_p_image']['tmp_name'];
             $update_folder = 'image/' . $update_image;
             move_uploaded_file($update_image_tmp, $update_folder);
-            $stmt = $conn->prepare("UPDATE products SET name = ?, price = ?, sale = ?, product_detail = ?, image = ? WHERE id = ?");
-            $stmt->bind_param("sdsssi", $update_name, $update_price, $update_sale, $update_detail, $update_image, $update_id);
+            $stmt = $conn->prepare("UPDATE products SET name = ?, price = ?, sale = ?, product_detail = ?, origin = ?, type = ?, image = ? WHERE id = ?");
+            $stmt->bind_param("sdsssssi", $update_name, $update_price, $update_sale, $update_detail, $update_origin, $update_type, $update_image, $update_id);
         } else {
-            $stmt = $conn->prepare("UPDATE products SET name = ?, price = ?, sale = ?, product_detail = ? WHERE id = ?");
-            $stmt->bind_param("sdssi", $update_name, $update_price, $update_sale, $update_detail, $update_id);
+            $stmt = $conn->prepare("UPDATE products SET name = ?, price = ?, sale = ?, product_detail = ?, origin = ?, type = ? WHERE id = ?");
+            $stmt->bind_param("sdssssi", $update_name, $update_price, $update_sale, $update_detail, $update_origin, $update_type, $update_id);
         }
         if ($stmt->execute()) {
             $message[] = 'Product updated successfully.';
@@ -108,7 +112,7 @@ if (isset($_POST['update_product'])) {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8">
+<meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Product Management - Flower Shop</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
@@ -377,6 +381,20 @@ if (isset($_POST['update_product'])) {
                         <textarea name="detail" required></textarea>
                     </div>
                     <div class="input-field">
+                        <label>Origin</label>
+                        <input type="text" name="origin" placeholder="e.g., Vietnam">
+                    </div>
+                    <div class="input-field">
+                        <label>Product Type</label>
+                        <select name="type">
+                            <option value="">Select type</option>
+                            <option value="birthday">Birthday</option>
+                            <option value="gift">Gift</option>
+                            <option value="congratulation">Congratulation</option>
+                            <option value="other">Other</option>
+                        </select>
+                    </div>
+                    <div class="input-field">
                         <label>Product Image</label>
                         <input type="file" name="image" accept="image/*" required>
                     </div>
@@ -397,6 +415,8 @@ if (isset($_POST['update_product'])) {
                         <h4><?php echo htmlspecialchars($product['name']); ?></h4>
                         <p>Price: $<?php echo number_format($product['price'], 2); ?></p>
                         <p>Discount: <?php echo htmlspecialchars($product['sale'] ?: 'None'); ?></p>
+                        <p>Origin: <?php echo htmlspecialchars($product['origin'] ?: 'N/A'); ?></p>
+                        <p>Type: <?php echo htmlspecialchars(ucfirst($product['type'] ?: 'N/A')); ?></p>
                         <p><?php echo htmlspecialchars($product['product_detail']); ?></p>
                         <a href="#" class="edit"
                            data-id="<?php echo htmlspecialchars($product['id']); ?>"
@@ -404,6 +424,8 @@ if (isset($_POST['update_product'])) {
                            data-price="<?php echo htmlspecialchars($product['price']); ?>"
                            data-sale="<?php echo htmlspecialchars($product['sale']); ?>"
                            data-detail="<?php echo htmlspecialchars($product['product_detail']); ?>"
+                           data-origin="<?php echo htmlspecialchars($product['origin']); ?>"
+                           data-type="<?php echo htmlspecialchars($product['type']); ?>"
                            data-image="image/<?php echo htmlspecialchars($product['image']); ?>"
                            onclick="openEditModal(this)">Edit</a>
                         <a href="admin_product.php?delete=<?php echo htmlspecialchars($product['id']); ?>"
@@ -442,6 +464,20 @@ if (isset($_POST['update_product'])) {
                 <textarea name="update_p_detail" id="updateDetail" required></textarea>
             </div>
             <div class="input-field">
+                <label>Origin</label>
+                <input type="text" name="update_p_origin" id="updateOrigin" placeholder="e.g., Vietnam">
+            </div>
+            <div class="input-field">
+                <label>Product Type</label>
+                <select name="update_p_type" id="updateType">
+                    <option value="">Select type</option>
+                    <option value="birthday">Birthday</option>
+                    <option value="gift">Gift</option>
+                    <option value="congratulation">Congratulation</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+            <div class="input-field">
                 <label>Product Image</label>
                 <input type="file" name="update_p_image" accept="image/*">
             </div>
@@ -456,6 +492,8 @@ if (isset($_POST['update_product'])) {
             const price = element.getAttribute('data-price');
             const sale = element.getAttribute('data-sale');
             const detail = element.getAttribute('data-detail');
+            const origin = element.getAttribute('data-origin');
+            const type = element.getAttribute('data-type');
             const imageUrl = element.getAttribute('data-image');
 
             document.getElementById('updateId').value = id;
@@ -463,6 +501,8 @@ if (isset($_POST['update_product'])) {
             document.getElementById('updatePrice').value = price;
             document.getElementById('updateSale').value = sale;
             document.getElementById('updateDetail').value = detail;
+            document.getElementById('updateOrigin').value = origin || '';
+            document.getElementById('updateType').value = type || '';
             document.getElementById('updateImage').src = imageUrl;
 
             document.getElementById('updateModal').style.display = 'flex';
