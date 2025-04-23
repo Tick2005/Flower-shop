@@ -1,8 +1,14 @@
 <?php
+include 'connection.php';
+
+// Kiểm tra session admin
+$admin_id = $_SESSION['admin_id'] ?? null;
 if (!isset($admin_id)) {
-    header('location: login.php');
+    $_SESSION['message'] = 'Please log in as an admin to access this page.';
+    header('Location: login.php');
     exit();
 }
+
 ?>
 
 <!DOCTYPE html>
