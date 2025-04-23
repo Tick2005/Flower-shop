@@ -11,6 +11,15 @@ if (!isset($admin_id)) {
     header('Location: login.php');
     exit();
 }
+if (isset($_POST['logout'])) {
+    $stmt = $conn->prepare("UPDATE users SET status = 'Offline' WHERE id = ?");
+    $stmt->bind_param("i", $admin_id);
+    $stmt->execute();
+    $stmt->close();
+    session_destroy();
+    header('Location: login.php');
+    exit();
+}
 
 // Khởi tạo mảng message nếu chưa có
 $message = $_SESSION['message'] ?? [];
