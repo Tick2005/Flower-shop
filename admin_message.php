@@ -2,35 +2,46 @@
 include 'connection.php';
 session_start();
 
-// Kiểm tra session admin
-$admin_id = $_SESSION['admin_id'] ?? null;
-if (!isset($admin_id)) {
+// Session timeout
+$timeout_duration = 1800; // 30 minutes
+if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY']) > $timeout_duration) {
+    session_unset();
+    session_destroy();
+    header('Location: login.php?timeout=true');
+    exit();
+}
+$_SESSION['LAST_ACTIVITY'] = time();
+
+// Check admin session
+$admin_id = filter_var($_SESSION['admin_id'] ?? null, FILTER_VALIDATE_INT);
+if (!$admin_id) {
     $_SESSION['message'] = 'Please log in as an admin to access this page.';
-    header('location: login.php');
+    header('Location: login.php');
     exit();
 }
 
-// Thiết lập CSRF token nếu chưa có
-if (!isset($_SESSION['csrf_token'])) {
-    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
-}
+// Initialize message array
+$message = $_SESSION['message'] ?? [];
+unset($_SESSION['message']);
 
-// Xử lý xóa tin nhắn
-$message = [];
-if (isset($_GET['delete'])) {
-    $delete_id = filter_var($_GET['delete'], FILTER_SANITIZE_NUMBER_INT);
-    $stmt = $conn->prepare("DELETE FROM message WHERE id = ?");
-    $stmt->bind_param("i", $delete_id);
-    if ($stmt->execute()) {
-        $message[] = 'Message deleted successfully.';
-    } else {
-        $message[] = 'Failed to delete message.';
+// Handle delete message
+if (isset($_GET['delete']) && isset($_GET['csrf_token']) && $_GET['csrf_token'] === $_SESSION['csrf_token']) {
+    $delete_id = filter_var($_GET['delete'], FILTER_VALIDATE_INT);
+    if ($delete_id) {
+        $stmt = $conn->prepare("DELETE FROM message WHERE id = ?");
+        $stmt->bind_param("i", $delete_id);
+        if ($stmt->execute()) {
+            $message[] = 'Message deleted successfully.';
+        } else {
+            $message[] = 'Failed to delete message.';
+        }
+        $stmt->close();
     }
-    $stmt->close();
-    header('location: admin_message.php');
+    header('Location: admin_message.php');
     exit();
 }
 ?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -51,7 +62,6 @@ if (isset($_GET['delete'])) {
             background: #f5f5f5;
             color: #333;
             padding-top: 80px;
-
         }
 
         .container {
@@ -154,27 +164,38 @@ if (isset($_GET['delete'])) {
         <main class="main-content">
             <section class="messages">
                 <h1>Message Management</h1>
+                <?php
+                if (!empty($message)) {
+                    foreach ($message as $msg) {
+                        echo '<div class="message">' . htmlspecialchars($msg) . '</div>';
+                    }
+                }
+                ?>
                 <div class="box-container">
                     <?php
-                        $select_messages = mysqli_query($conn, "SELECT * FROM message") or die('Query failed');
-                        if (mysqli_num_rows($select_messages) > 0) {
-                            while ($message = mysqli_fetch_assoc($select_messages)) {
+                    $stmt = $conn->prepare("SELECT * FROM message");
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+                    if ($result->num_rows > 0) {
+                        while ($msg = $result->fetch_assoc()) {
                     ?>
                     <div class="box">
-                        <p>Message ID: <span><?php echo htmlspecialchars($message['id']); ?></span></p>
-                        <p>User ID: <span><?php echo htmlspecialchars($message['user_id']); ?></span></p>
-                        <p>Name: <span><?php echo htmlspecialchars($message['name']); ?></span></p>
-                        <p>Email: <span><?php echo htmlspecialchars($message['email']); ?></span></p>
-                        <p>Message: <span><?php echo htmlspecialchars($message['message']); ?></span></p>
-                        <a href="admin_message.php?delete=<?php echo htmlspecialchars($message['id']); ?>" 
+                        <p>Message ID: <span><?php echo htmlspecialchars($msg['id']); ?></span></p>
+                        <p>User ID: <span><?php echo htmlspecialchars($msg['user_id']); ?></span></p>
+                        <p>Name: <span><?php echo htmlspecialchars($msg['name']); ?></span></p>
+                        <p>Email: <span><?php echo htmlspecialchars($msg['email']); ?></span></p>
+                        <p>Phone: <span><?php echo htmlspecialchars($msg['number']); ?></span></p>
+                        <p>Message: <span><?php echo htmlspecialchars($msg['message']); ?></span></p>
+                        <a href="admin_message.php?delete=<?php echo htmlspecialchars($msg['id']); ?>&csrf_token=<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>" 
                            class="btn" 
                            onclick="return confirm('Delete this message?')">Delete</a>
                     </div>
                     <?php
-                            }
-                        } else {
-                            echo '<p>No messages found.</p>';
                         }
+                    } else {
+                        echo '<p>No messages found.</p>';
+                    }
+                    $stmt->close();
                     ?>
                 </div>
             </section>
