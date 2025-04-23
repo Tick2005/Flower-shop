@@ -1,22 +1,10 @@
 <?php
 include 'connection.php';
 session_start();
-
 // Kiểm tra session admin
 $admin_id = $_SESSION['admin_id'] ?? null;
-
 if (!isset($admin_id)) {
-    // Nếu không có session admin, chuyển hướng về login.php với thông báo
     $_SESSION['message'] = 'Please log in as an admin to access this page.';
-    header('Location: login.php');
-    exit();
-}
-if (isset($_POST['logout'])) {
-    $stmt = $conn->prepare("UPDATE users SET status = 'Offline' WHERE id = ?");
-    $stmt->bind_param("i", $admin_id);
-    $stmt->execute();
-    $stmt->close();
-    session_destroy();
     header('Location: login.php');
     exit();
 }
@@ -34,7 +22,6 @@ if (isset($_POST['confirm_order'])) {
     if ($csrf_token !== ($_SESSION['csrf_token'] ?? '')) {
         $message[] = 'Invalid CSRF token.';
     } else {
-        // Cập nhật trạng thái đơn hàng từ pending sang confirmed
         $stmt = $conn->prepare("UPDATE orders SET payment_status = 'confirmed' WHERE id = ? AND payment_status = 'pending'");
         $stmt->bind_param("i", $order_id);
         if ($stmt->execute()) {
@@ -54,6 +41,7 @@ if (isset($_POST['confirm_order'])) {
 if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
+
 ?>
 
 <!DOCTYPE html>
