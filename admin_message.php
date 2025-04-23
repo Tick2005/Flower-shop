@@ -1,19 +1,36 @@
 <?php
 include 'connection.php';
 session_start();
-$admin_id = $_SESSION['admin_id'];
+
+// Kiểm tra session admin
+$admin_id = $_SESSION['admin_id'] ?? null;
 if (!isset($admin_id)) {
+    $_SESSION['message'] = 'Please log in as an admin to access this page.';
     header('location: login.php');
     exit();
 }
-if (isset($_POST['logout'])) {
-    mysqli_query($conn, "UPDATE users SET status='Offline' WHERE id='$admin_id'");
-    session_destroy();
-    header('location: login.php');
+
+// Thiết lập CSRF token nếu chưa có
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// Xử lý xóa tin nhắn
+$message = [];
+if (isset($_GET['delete'])) {
+    $delete_id = filter_var($_GET['delete'], FILTER_SANITIZE_NUMBER_INT);
+    $stmt = $conn->prepare("DELETE FROM message WHERE id = ?");
+    $stmt->bind_param("i", $delete_id);
+    if ($stmt->execute()) {
+        $message[] = 'Message deleted successfully.';
+    } else {
+        $message[] = 'Failed to delete message.';
+    }
+    $stmt->close();
+    header('location: admin_message.php');
     exit();
 }
 ?>
-
 <!DOCTYPE html>
 <html lang="en">
 <head>
