@@ -100,3 +100,12 @@ p {
     color: yellow;
     margin-bottom: 15px;
 }
+input:-webkit-autofill,
+input:-webkit-autofill:hover,
+input:-webkit-autofill:focus,
+input:-webkit-autofill:active {
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: #333 !important;
+    background: rgba(255, 255, 255, 0.5) !important;
+    transition: background-color 5000s ease-in-out 0s;
+}
