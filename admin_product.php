@@ -24,16 +24,6 @@ if (isset($_GET['delete'])) {
     exit();
 }
 
-if (isset($_POST['logout'])) {
-    $stmt = $conn->prepare("UPDATE users SET status = 'Offline' WHERE id = ?");
-    $stmt->bind_param("i", $admin_id);
-    $stmt->execute();
-    $stmt->close();
-    session_destroy();
-    header('Location: login.php');
-    exit();
-}
-
 if (isset($_POST['add-product'])) {
     $product_name = $_POST['name'];
     $product_price = $_POST['price'];
