@@ -119,7 +119,7 @@ CREATE TABLE `products` (
   `product_detail` text NOT NULL,
   `image` varchar(255) NOT NULL,
   `origin` varchar(255) DEFAULT NULL,
-  `type` enum('birthday','wedding','bouquet','condolence','backet','other') DEFAULT NULL
+  `type` enum('birthday','wedding','bouquet','condolence','basket','other') DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
