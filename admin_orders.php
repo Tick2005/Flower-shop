@@ -2,85 +2,49 @@
 include 'connection.php';
 session_start();
 
-// Check for remember-me token
-if (!isset($_SESSION['admin_id']) && isset($_COOKIE['remember_token'])) {
-    $token = filter_var($_COOKIE['remember_token'], FILTER_SANITIZE_STRING);
-    try {
-        $stmt = $conn->prepare("SELECT id, name, email, user_type FROM users WHERE remember_token = ?");
-        $stmt->bind_param("s", $token);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        if ($result->num_rows > 0) {
-            $user = $result->fetch_assoc();
-            if ($user['user_type'] === 'admin') {
-                session_regenerate_id(true);
-                $_SESSION['admin_id'] = $user['id'];
-                $_SESSION['admin_name'] = $user['name'];
-                $_SESSION['admin_email'] = $user['email'];
-                $_SESSION['LAST_ACTIVITY'] = time();
-            }
-        }
-    } catch (mysqli_sql_exception $e) {
-        $message[] = "Session restoration failed. Please log in.";
-    }
-}
-
-// Verify admin session
+// Kiểm tra session admin
 $admin_id = $_SESSION['admin_id'] ?? null;
+
 if (!isset($admin_id)) {
-    header('location: login.php');
+    // Nếu không có session admin, chuyển hướng về login.php với thông báo
+    $_SESSION['message'] = 'Please log in as an admin to access this page.';
+    header('Location: login.php');
     exit();
 }
 
-// Session timeout
-$timeout_duration = 1800; // 30 minutes
-if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY']) > $timeout_duration) {
-    session_unset();
-    session_destroy();
-    header('Location: login.php?timeout=true');
-    exit();
-}
-$_SESSION['LAST_ACTIVITY'] = time();
+// Khởi tạo mảng message nếu chưa có
+$message = $_SESSION['message'] ?? [];
+unset($_SESSION['message']); // Xóa message sau khi hiển thị
 
-// Handle logout
-if (isset($_POST['logout'])) {
-    try {
-        $stmt = $conn->prepare("UPDATE users SET status = 'Offline' WHERE id = ?");
-        $stmt->bind_param("i", $admin_id);
-        $stmt->execute();
-    } catch (mysqli_sql_exception $e) {
-        $message[] = "Error updating status. Logged out anyway.";
-    }
-    session_destroy();
-    setcookie('remember_token', '', time() - 3600, '/', '', true, true); // Clear cookie
-    header('location: login.php');
-    exit();
-}
-
-// Handle order confirmation
-$message = [];
+// Xử lý xác nhận đơn hàng
 if (isset($_POST['confirm_order'])) {
-    $order_id = filter_var($_POST['order_id'], FILTER_SANITIZE_NUMBER_INT);
+    $order_id = $_POST['order_id'];
     $csrf_token = $_POST['csrf_token'] ?? '';
-    if ($csrf_token !== $_SESSION['csrf_token']) {
-        $message[] = "Invalid CSRF token.";
+
+    // Kiểm tra CSRF token
+    if ($csrf_token !== ($_SESSION['csrf_token'] ?? '')) {
+        $message[] = 'Invalid CSRF token.';
     } else {
-        try {
-            $stmt = $conn->prepare("UPDATE orders SET status = 'confirmed' WHERE id = ? AND status = 'pending'");
-            $stmt->bind_param("i", $order_id);
-            if ($stmt->execute() && $stmt->affected_rows > 0) {
-                $message[] = "Order #$order_id confirmed successfully.";
+        // Cập nhật trạng thái đơn hàng từ pending sang confirmed
+        $stmt = $conn->prepare("UPDATE orders SET payment_status = 'confirmed' WHERE id = ? AND payment_status = 'pending'");
+        $stmt->bind_param("i", $order_id);
+        if ($stmt->execute()) {
+            if ($stmt->affected_rows > 0) {
+                $message[] = 'Order confirmed successfully.';
             } else {
-                $message[] = "Failed to confirm order #$order_id or already confirmed.";
+                $message[] = 'Order not found or already confirmed.';
             }
-        } catch (mysqli_sql_exception $e) {
-            $message[] = "Error confirming order #$order_id.";
+        } else {
+            $message[] = 'Failed to confirm order.';
         }
+        $stmt->close();
     }
 }
 
-// Generate CSRF token
-$_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+// Thiết lập CSRF token nếu chưa có
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
 ?>
 
 <!DOCTYPE html>
@@ -221,21 +185,21 @@ $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
             <section class="orders">
                 <h1>Order Management</h1>
                 <?php
-                    if (!empty($message)) {
-                        foreach ($message as $msg) {
-                            echo '<div class="message">' . htmlspecialchars($msg) . '</div>';
-                        }
+                if (!empty($message)) {
+                    foreach ($message as $msg) {
+                        echo '<div class="message">' . htmlspecialchars($msg) . '</div>';
                     }
+                }
                 ?>
                 <!-- Pending Orders -->
                 <h2>Pending Orders</h2>
                 <div class="box-container">
                     <?php
-                        $select_pending = $conn->prepare("SELECT * FROM orders WHERE payment_status = 'pending'");
-                        $select_pending->execute();
-                        $result_pending = $select_pending->get_result();
-                        if ($result_pending->num_rows > 0) {
-                            while ($order = $result_pending->fetch_assoc()) {
+                    $select_pending = $conn->prepare("SELECT * FROM orders WHERE payment_status = 'pending'");
+                    $select_pending->execute();
+                    $result_pending = $select_pending->get_result();
+                    if ($result_pending->num_rows > 0) {
+                        while ($order = $result_pending->fetch_assoc()) {
                     ?>
                     <div class="box">
                         <p>Order ID: <span><?php echo htmlspecialchars($order['id']); ?></span></p>
@@ -252,10 +216,11 @@ $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
                         </form>
                     </div>
                     <?php
-                            }
-                        } else {
-                            echo '<p>No pending orders found.</p>';
                         }
+                    } else {
+                        echo '<p>No pending orders found.</p>';
+                    }
+                    $select_pending->close();
                     ?>
                 </div>
 
@@ -263,11 +228,11 @@ $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
                 <h2>Confirmed Orders</h2>
                 <div class="box-container">
                     <?php
-                        $select_confirmed = $conn->prepare("SELECT * FROM orders WHERE payment_status = 'confirmed'");
-                        $select_confirmed->execute();
-                        $result_confirmed = $select_confirmed->get_result();
-                        if ($result_confirmed->num_rows > 0) {
-                            while ($order = $result_confirmed->fetch_assoc()) {
+                    $select_confirmed = $conn->prepare("SELECT * FROM orders WHERE payment_status = 'confirmed'");
+                    $select_confirmed->execute();
+                    $result_confirmed = $select_confirmed->get_result();
+                    if ($result_confirmed->num_rows > 0) {
+                        while ($order = $result_confirmed->fetch_assoc()) {
                     ?>
                     <div class="box">
                         <p>Order ID: <span><?php echo htmlspecialchars($order['id']); ?></span></p>
@@ -276,13 +241,14 @@ $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
                         <p>Payment Status: <span style="color: <?php echo $order['payment_status'] === 'completed' ? 'green' : 'orange'; ?>">
                             <?php echo htmlspecialchars(ucfirst($order['payment_status'])); ?></span></p>
                         <p>Placed On: <span><?php echo htmlspecialchars($order['placed_on'] ?? 'N/A'); ?></span></p>
-                        <p>Status: <span style="color: blue;"><?php echo htmlspecialchars(ucfirst($order['status'])); ?></span></p>
+                        <p>Status: <span style="color: blue;"><?php echo htmlspecialchars(ucfirst($order['payment_status'])); ?></span></p>
                     </div>
                     <?php
-                            }
-                        } else {
-                            echo '<p>No confirmed orders found.</p>';
                         }
+                    } else {
+                        echo '<p>No confirmed orders found.</p>';
+                    }
+                    $select_confirmed->close();
                     ?>
                 </div>
 
@@ -290,11 +256,11 @@ $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
                 <h2>Completed Orders</h2>
                 <div class="box-container">
                     <?php
-                        $select_completed = $conn->prepare("SELECT * FROM orders WHERE payment_status = 'completed'");
-                        $select_completed->execute();
-                        $result_completed = $select_completed->get_result();
-                        if ($result_completed->num_rows > 0) {
-                            while ($order = $result_completed->fetch_assoc()) {
+                    $select_completed = $conn->prepare("SELECT * FROM orders WHERE payment_status = 'completed'");
+                    $select_completed->execute();
+                    $result_completed = $select_completed->get_result();
+                    if ($result_completed->num_rows > 0) {
+                        while ($order = $result_completed->fetch_assoc()) {
                     ?>
                     <div class="box">
                         <p>Order ID: <span><?php echo htmlspecialchars($order['id']); ?></span></p>
@@ -303,13 +269,14 @@ $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
                         <p>Payment Status: <span style="color: <?php echo $order['payment_status'] === 'completed' ? 'green' : 'orange'; ?>">
                             <?php echo htmlspecialchars(ucfirst($order['payment_status'])); ?></span></p>
                         <p>Placed On: <span><?php echo htmlspecialchars($order['placed_on'] ?? 'N/A'); ?></span></p>
-                        <p>Status: <span style="color: green;"><?php echo htmlspecialchars(ucfirst($order['status'])); ?></span></p>
+                        <p>Status: <span style="color: green;"><?php echo htmlspecialchars(ucfirst($order['payment_status'])); ?></span></p>
                     </div>
                     <?php
-                            }
-                        } else {
-                            echo '<p>No completed orders found.</p>';
                         }
+                    } else {
+                        echo '<p>No completed orders found.</p>';
+                    }
+                    $select_completed->close();
                     ?>
                 </div>
             </section>
