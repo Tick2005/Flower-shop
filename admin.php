@@ -1,15 +1,12 @@
 <?php
 include 'connection.php';
 session_start();
-$admin_id = $_SESSION['admin_id'];
-if (!isset($admin_id)) {
-    header('location: login.php');
-    exit();
-}
-if (isset($_POST['logout'])) {
-    mysqli_query($conn, "UPDATE users SET status='Offline' WHERE id='$admin_id'");
-    session_destroy();
-    header('location: login.php');
+
+// Kiểm tra session
+$user_id = $_SESSION['admin_id'] ?? null;
+if (!isset($user_id)) {
+    $_SESSION['message'] = 'Please log in to access this page.';
+    header('Location: login.php');
     exit();
 }
 ?>
