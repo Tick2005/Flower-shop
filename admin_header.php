@@ -1,14 +1,40 @@
 <?php
 include 'connection.php';
 
-// Kiểm tra session admin
-$admin_id = $_SESSION['admin_id'] ?? null;
-if (!isset($admin_id)) {
+// Initialize session if not started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Generate CSRF token if not set
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// Check admin session
+$admin_id = filter_var($_SESSION['admin_id'] ?? null, FILTER_VALIDATE_INT);
+if (!$admin_id) {
     $_SESSION['message'] = 'Please log in as an admin to access this page.';
     header('Location: login.php');
     exit();
 }
 
+// Handle logout
+if (isset($_POST['logout'])) {
+    try {
+        $stmt = $conn->prepare("UPDATE users SET status = 'Offline', remember_token = NULL WHERE id = ?");
+        $stmt->bind_param("i", $admin_id);
+        $stmt->execute();
+        setcookie('remember_token', '', time() - 3600, '/', '', true, true);
+        session_destroy();
+        header('Location: login.php');
+        exit();
+    } catch (Exception $e) {
+        $_SESSION['message'] = 'Failed to logout: ' . htmlspecialchars($e->getMessage());
+        header('Location: ' . $_SERVER['PHP_SELF']);
+        exit();
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -213,12 +239,13 @@ if (!isset($admin_id)) {
             <div class="user-menu" id="user-menu">
                 <div class="user-toggle">
                     <i class="fas fa-user"></i>
-                    <span><?php echo htmlspecialchars($_SESSION['admin_name']); ?></span>
+                    <span><?php echo htmlspecialchars($_SESSION['admin_name'] ?? 'Admin'); ?></span>
                 </div>
                 <div class="user-info">
-                    <p>Username: <span><?php echo htmlspecialchars($_SESSION['admin_name']); ?></span></p>
-                    <p>Email: <span><?php echo htmlspecialchars($_SESSION['admin_email']); ?></span></p>
+                    <p>Username: <span><?php echo htmlspecialchars($_SESSION['admin_name'] ?? 'N/A'); ?></span></p>
+                    <p>Email: <span><?php echo htmlspecialchars($_SESSION['admin_email'] ?? 'N/A'); ?></span></p>
                     <form method="post">
+                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                         <button type="submit" name="logout" class="btn">Logout</button>
                     </form>
                 </div>
@@ -241,7 +268,6 @@ if (!isset($admin_id)) {
             userMenu.classList.toggle('active');
         });
 
-        // Close user menu and nav links when clicking outside
         document.addEventListener('click', (e) => {
             if (!userMenu.contains(e.target) && !userToggle.contains(e.target)) {
                 userMenu.classList.remove('active');
@@ -251,7 +277,6 @@ if (!isset($admin_id)) {
             }
         });
 
-        // Close nav links when clicking a link on mobile
         navLinks.querySelectorAll('a').forEach(link => {
             link.addEventListener('click', () => {
                 if (window.innerWidth <= 768) {
