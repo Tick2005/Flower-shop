@@ -2,13 +2,27 @@
 include 'connection.php';
 session_start();
 
-// Kiểm tra session
-$user_id = $_SESSION['admin_id'] ?? null;
-if (!isset($user_id)) {
-    $_SESSION['message'] = 'Please log in to access this page.';
+// Session timeout
+$timeout_duration = 1800; // 30 minutes
+if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY']) > $timeout_duration) {
+    session_unset();
+    session_destroy();
+    header('Location: login.php?timeout=true');
+    exit();
+}
+$_SESSION['LAST_ACTIVITY'] = time();
+
+// Check admin session
+$admin_id = filter_var($_SESSION['admin_id'] ?? null, FILTER_VALIDATE_INT);
+if (!$admin_id) {
+    $_SESSION['message'] = 'Please upregulated log in as an admin to access this page.';
     header('Location: login.php');
     exit();
 }
+
+// Initialize message array
+$message = $_SESSION['message'] ?? [];
+unset($_SESSION['message']);
 ?>
 
 <!DOCTYPE html>
@@ -28,7 +42,7 @@ if (!isset($user_id)) {
         }
 
         body {
-            background: #f5f5f5 ;
+            background: #f5f5f5;
             color: #333;
             padding-top: 80px;
         }
@@ -82,6 +96,19 @@ if (!isset($user_id)) {
             text-transform: capitalize;
         }
 
+        .message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            color: #1a5c5f;
+            font-weight: 500;
+            z-index: 1000;
+        }
+
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
@@ -103,28 +130,42 @@ if (!isset($user_id)) {
         <main class="main-content">
             <section class="dashboard">
                 <h1>Admin Dashboard</h1>
+                <?php
+                if (!empty($message)) {
+                    foreach ($message as $msg) {
+                        echo '<div class="message">' . htmlspecialchars($msg) . '</div>';
+                    }
+                }
+                ?>
                 <div class="box-container">
                     <!-- Pending Orders -->
                     <div class="box">
                         <?php
-                            $total_pendings = 0;
-                            $select_pendings = mysqli_query($conn, "SELECT total_price FROM orders WHERE payment_status = 'pending'") or die("Query failed");
-                            while ($pending = mysqli_fetch_assoc($select_pendings)) {
-                                $total_pendings += $pending['total_price'];
-                            }
+                        $stmt = $conn->prepare("SELECT SUM(total_price) as total FROM orders WHERE payment_status = 'pending'");
+                        $stmt->execute();
+                        $total_pendings = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
                         ?>
                         <h3>$<?php echo number_format($total_pendings, 2); ?></h3>
                         <p>Pending Orders</p>
                     </div>
 
+                    <!-- Confirmed Orders -->
+                    <div class="box">
+                        <?php
+                        $stmt = $conn->prepare("SELECT SUM(total_price) as total FROM orders WHERE payment_status = 'confirmed'");
+                        $stmt->execute();
+                        $total_confirmed = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
+                        ?>
+                        <h3>$<?php echo number_format($total_confirmed, 2); ?></h3>
+                        <p>Confirmed Orders</p>
+                    </div>
+
                     <!-- Completed Orders -->
                     <div class="box">
                         <?php
-                            $total_completed = 0;
-                            $select_completed = mysqli_query($conn, "SELECT total_price FROM orders WHERE payment_status = 'completed'") or die("Query failed");
-                            while ($completed = mysqli_fetch_assoc($select_completed)) {
-                                $total_completed += $completed['total_price'];
-                            }
+                        $stmt = $conn->prepare("SELECT SUM(total_price) as total FROM orders WHERE payment_status = 'completed'");
+                        $stmt->execute();
+                        $total_completed = $stmt->get_result()->fetch_assoc()['total'] ?? 0;
                         ?>
                         <h3>$<?php echo number_format($total_completed, 2); ?></h3>
                         <p>Completed Orders</p>
@@ -133,25 +174,53 @@ if (!isset($user_id)) {
                     <!-- Total Orders -->
                     <div class="box">
                         <?php
-                            $order_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM orders"));
+                        $stmt = $conn->prepare("SELECT COUNT(id) as count FROM orders");
+                        $stmt->execute();
+                        $order_count = $stmt->get_result()->fetch_assoc()['count'];
                         ?>
                         <h3><?php echo $order_count; ?></h3>
                         <p>Total Orders</p>
                     </div>
 
-                    <!-- Products Added -->
+                    <!-- Products Available -->
                     <div class="box">
                         <?php
-                            $product_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM products"));
+                        $stmt = $conn->prepare("SELECT COUNT(id) as count FROM products");
+                        $stmt->execute();
+                        $product_count = $stmt->get_result()->fetch_assoc()['count'];
                         ?>
                         <h3><?php echo $product_count; ?></h3>
                         <p>Products Available</p>
                     </div>
 
-                    <!-- Registered Users -->
+                    <!-- Items in Cart -->
                     <div class="box">
                         <?php
-                            $user_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM users WHERE user_type='user'"));
+                        $stmt = $conn->prepare("SELECT COUNT(id) as count FROM cart");
+                        $stmt->execute();
+                        $cart_count = $stmt->get_result()->fetch_assoc()['count'];
+                        ?>
+                        <h3><?php echo $cart_count; ?></h3>
+                        <p>Items in Cart</p>
+                    </div>
+
+                    <!-- Items in Wishlist -->
+                    <div class="box">
+                        <?php
+                        $stmt = $conn->prepare("SELECT COUNT(id) as count FROM wishlist");
+                        $stmt->execute();
+                        $wishlist_count = $stmt->get_result()->fetch_assoc()['count'];
+                        ?>
+                        <h3><?php echo $wishlist_count; ?></h3>
+                        <p>Items in Wishlist</p>
+                    </div>
+
+                    <!-- Registered Customers -->
+                    <div class="box">
+                        <?php
+                        $stmt = $conn->prepare("SELECT COUNT(id) as count FROM users WHERE user_type = 'user'");
+                        $stmt->execute();
+                        $user_count = $stmt->get_result()->fetch_assoc()['count'];
                         ?>
                         <h3><?php echo $user_count; ?></h3>
                         <p>Registered Customers</p>
@@ -160,7 +229,9 @@ if (!isset($user_id)) {
                     <!-- Admin Accounts -->
                     <div class="box">
                         <?php
-                            $admin_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM users WHERE user_type='admin'"));
+                        $stmt = $conn->prepare("SELECT COUNT(id) as count FROM users WHERE user_type = 'admin'");
+                        $stmt->execute();
+                        $admin_count = $stmt->get_result()->fetch_assoc()['count'];
                         ?>
                         <h3><?php echo $admin_count; ?></h3>
                         <p>Admin Accounts</p>
@@ -169,7 +240,9 @@ if (!isset($user_id)) {
                     <!-- Total Users -->
                     <div class="box">
                         <?php
-                            $total_users = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM users"));
+                        $stmt = $conn->prepare("SELECT COUNT(id) as count FROM users");
+                        $stmt->execute();
+                        $total_users = $stmt->get_result()->fetch_assoc()['count'];
                         ?>
                         <h3><?php echo $total_users; ?></h3>
                         <p>Total Users</p>
@@ -178,7 +251,9 @@ if (!isset($user_id)) {
                     <!-- Messages -->
                     <div class="box">
                         <?php
-                            $message_count = mysqli_num_rows(mysqli_query($conn, "SELECT id FROM message"));
+                        $stmt = $conn->prepare("SELECT COUNT(id) as count FROM message");
+                        $stmt->execute();
+                        $message_count = $stmt->get_result()->fetch_assoc()['count'];
                         ?>
                         <h3><?php echo $message_count; ?></h3>
                         <p>Unread Messages</p>
@@ -187,5 +262,10 @@ if (!isset($user_id)) {
             </section>
         </main>
     </div>
+    <script>
+        setTimeout(() => {
+            document.querySelectorAll('.message').forEach(msg => msg.remove());
+        }, 3000);
+    </script>
 </body>
 </html>
