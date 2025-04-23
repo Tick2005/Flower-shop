@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 16, 2025 at 08:37 AM
+-- Generation Time: Apr 23, 2025 at 04:49 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -69,7 +69,7 @@ CREATE TABLE `orders` (
   `total_products` varchar(255) NOT NULL,
   `total_price` varchar(255) NOT NULL,
   `placed_on` varchar(255) NOT NULL,
-  `payment_status` varchar(255) NOT NULL
+  `payment_status` varchar(255) NOT NULL DEFAULT 'pending'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -82,6 +82,7 @@ CREATE TABLE `products` (
   `id` int(255) NOT NULL,
   `name` varchar(255) NOT NULL,
   `price` varchar(255) NOT NULL,
+  `sale` varchar(255) NOT NULL,
   `product_detail` varchar(255) NOT NULL,
   `image` varchar(255) NOT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
@@ -98,16 +99,17 @@ CREATE TABLE `users` (
   `email` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
   `status` varchar(255) NOT NULL DEFAULT 'Offline',
-  `user_type` varchar(255) NOT NULL DEFAULT 'user'
+  `user_type` varchar(255) NOT NULL DEFAULT 'user',
+  `remeber_token` varchar(255) DEFAULT NULL
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `email`, `password`, `status`, `user_type`) VALUES
-(7, 'Duong', 'username@gmail.com', '$2y$10$ughBqCc1jp4IIrhH5gg2wu1hXYt3jh0CQb12eg3sGfw13tXrN0Ov2', 'Online', 'user'),
-(9, 'admin', 'admin@gmail.com', '$2y$10$cnhNJZx0GaQhOdpyS06i1OyZ489da.RiE3XRTekIVVrzAyyyWJ8bm', 'Offline', 'admin');
+INSERT INTO `users` (`id`, `name`, `email`, `password`, `status`, `user_type`, `remeber_token`) VALUES
+(7, 'Duong', 'username@gmail.com', '$2y$10$a1Y4h8HMlSPK6uYM0Myc4u3zCjrqY25IFDAo8atl5nM6IWcUv9h.i', 'Offline', 'user', NULL),
+(9, 'admin', 'admin@gmail.com', '$2y$10$n8Gk32v7SkVooSkkJeY4Te5fKy7RO9bVk2Sa6809ph8jRzCIp.A6O', 'Online', 'admin', NULL);
 
 -- --------------------------------------------------------
 
@@ -184,19 +186,19 @@ ALTER TABLE `message`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(255) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(255) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `id` int(255) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` int(255) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
 
 --
 -- AUTO_INCREMENT for table `users`
 --
 ALTER TABLE `users`
-  MODIFY `id` int(100) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=10;
+  MODIFY `id` int(100) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
 
 --
 -- AUTO_INCREMENT for table `wishlist`
