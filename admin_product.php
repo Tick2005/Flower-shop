@@ -2,101 +2,105 @@
 include 'connection.php';
 session_start();
 $admin_id = $_SESSION['admin_id'] ?? null;
+
 if (!isset($admin_id)) {
-    header('location: login.php');
+    header('Location: login.php');
     exit();
 }
 
 $message = [];
 
+if (isset($_GET['delete'])) {
+    $delete_id = $_GET['delete'];
+    $stmt = $conn->prepare("DELETE FROM products WHERE id = ?");
+    $stmt->bind_param("i", $delete_id);
+    if ($stmt->execute()) {
+        $message[] = 'Product deleted successfully.';
+    } else {
+        $message[] = 'Failed to delete product.';
+    }
+    $stmt->close();
+    header('Location: admin_product.php');
+    exit();
+}
+
 if (isset($_POST['logout'])) {
     $stmt = $conn->prepare("UPDATE users SET status = 'Offline' WHERE id = ?");
     $stmt->bind_param("i", $admin_id);
     $stmt->execute();
+    $stmt->close();
     session_destroy();
-    header('location: login.php');
+    header('Location: login.php');
     exit();
 }
 
-if (isset($_GET['delete'])) {
-    $user_id = filter_var($_GET['delete'], FILTER_SANITIZE_NUMBER_INT);
-    $stmt = $conn->prepare("DELETE FROM users WHERE id = ?");
-    $stmt->bind_param("i", $user_id);
-    if ($stmt->execute()) {
-        $message[] = "User deleted successfully.";
-    } else {
-        $message[] = "Failed to delete user.";
-    }
-    header('location: admin_user.php');
-    exit();
-}
+if (isset($_POST['add-product'])) {
+    $product_name = $_POST['name'];
+    $product_price = $_POST['price'];
+    $sale = $_POST['sale'];
+    $product_detail = $_POST['detail'];
+    $image = $_FILES['image']['name'];
+    $image_size = $_FILES['image']['size'];
+    $image_tmp_name = $_FILES['image']['tmp_name'];
+    $image_folder = 'image/' . basename($image);
 
-if (isset($_POST['add_admin'])) {
-    $name = filter_var($_POST['name'], FILTER_SANITIZE_STRING);
-    $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
-    $password = filter_var($_POST['password'], FILTER_SANITIZE_STRING);
-    $user_type = 'admin';
-
-    if (strlen($password) < 8) {
-        $message[] = "Password must be at least 8 characters long.";
-    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $message[] = "Invalid email format.";
+    // Validate sale field (e.g., "10%" or empty)
+    if (!empty($sale) && !preg_match('/^\d+%?$/', $sale)) {
+        $message[] = 'Invalid discount format. Use a number (e.g., "10%").';
     } else {
-        $stmt = $conn->prepare("SELECT id FROM users WHERE email = ? OR name = ?");
-        $stmt->bind_param("ss", $email, $name);
+        // Check if product name already exists
+        $stmt = $conn->prepare("SELECT name FROM products WHERE name = ?");
+        $stmt->bind_param("s", $product_name);
         $stmt->execute();
         $result = $stmt->get_result();
         if ($result->num_rows > 0) {
-            $message[] = "Email or username already exists.";
+            $message[] = 'Product name already exists.';
         } else {
-            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-            $stmt = $conn->prepare("INSERT INTO users (name, email, password, user_type, status) VALUES (?, ?, ?, ?, 'Offline')");
-            $stmt->bind_param("ssss", $name, $email, $hashed_password, $user_type);
+            $stmt = $conn->prepare("INSERT INTO products (name, price, sale, product_detail, image) VALUES (?, ?, ?, ?, ?)");
+            $stmt->bind_param("sdsss", $product_name, $product_price, $sale, $product_detail, $image);
             if ($stmt->execute()) {
-                $message[] = "Admin account added successfully.";
+                if ($image_size > 2000000) {
+                    $message[] = 'Product image size is too large.';
+                } else {
+                    move_uploaded_file($image_tmp_name, $image_folder);
+                    $message[] = 'Product added successfully.';
+                }
             } else {
-                $message[] = "Failed to add admin account.";
+                $message[] = 'Failed to add product.';
             }
         }
+        $stmt->close();
     }
 }
 
-if (isset($_POST['update_user'])) {
-    $user_id = filter_var($_POST['user_id'], FILTER_SANITIZE_NUMBER_INT);
-    $name = filter_var($_POST['name'], FILTER_SANITIZE_STRING);
-    $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
-    $status = filter_var($_POST['status'], FILTER_SANITIZE_STRING);
-    $user_type = filter_var($_POST['user_type'], FILTER_SANITIZE_STRING);
-    $password = !empty($_POST['password']) ? filter_var($_POST['password'], FILTER_SANITIZE_STRING) : null;
+if (isset($_POST['update_product'])) {
+    $update_id = $_POST['update_p_id'];
+    $update_name = $_POST['update_p_name'];
+    $update_price = $_POST['update_p_price'];
+    $update_sale = $_POST['update_p_sale'];
+    $update_detail = $_POST['update_p_detail'];
 
-    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        $message[] = "Invalid email format.";
+    // Validate sale field (e.g., "10%" or empty)
+    if (!empty($update_sale) && !preg_match('/^\d+%?$/', $update_sale)) {
+        $message[] = 'Invalid discount format. Use a number (e.g., "10%").';
     } else {
-        $stmt = $conn->prepare("SELECT id FROM users WHERE (email = ? OR name = ?) AND id != ?");
-        $stmt->bind_param("ssi", $email, $name, $user_id);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        if ($result->num_rows > 0) {
-            $message[] = "Email or username already exists.";
+        if (!empty($_FILES['update_p_image']['name'])) {
+            $update_image = basename($_FILES['update_p_image']['name']);
+            $update_image_tmp = $_FILES['update_p_image']['tmp_name'];
+            $update_folder = 'image/' . $update_image;
+            move_uploaded_file($update_image_tmp, $update_folder);
+            $stmt = $conn->prepare("UPDATE products SET name = ?, price = ?, sale = ?, product_detail = ?, image = ? WHERE id = ?");
+            $stmt->bind_param("sdsssi", $update_name, $update_price, $update_sale, $update_detail, $update_image, $update_id);
         } else {
-            if ($password && strlen($password) < 8) {
-                $message[] = "Password must be at least 8 characters long.";
-            } else {
-                if ($password) {
-                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
-                    $stmt = $conn->prepare("UPDATE users SET name = ?, email = ?, password = ?, status = ? WHERE id = ?");
-                    $stmt->bind_param("ssssi", $name, $email, $hashed_password, $status, $user_id);
-                } else {
-                    $stmt = $conn->prepare("UPDATE users SET name = ?, email = ?, status = ? WHERE id = ?");
-                    $stmt->bind_param("sssi", $name, $email, $status, $user_id);
-                }
-                if ($stmt->execute()) {
-                    $message[] = "User updated successfully.";
-                } else {
-                    $message[] = "Failed to update user.";
-                }
-            }
+            $stmt = $conn->prepare("UPDATE products SET name = ?, price = ?, sale = ?, product_detail = ? WHERE id = ?");
+            $stmt->bind_param("sdssi", $update_name, $update_price, $update_sale, $update_detail, $update_id);
         }
+        if ($stmt->execute()) {
+            $message[] = 'Product updated successfully.';
+        } else {
+            $message[] = 'Failed to update product.';
+        }
+        $stmt->close();
     }
 }
 ?>
@@ -106,7 +110,7 @@ if (isset($_POST['update_user'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Users - Flower Shop</title>
+    <title>Admin Product Management - Flower Shop</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <style>
@@ -120,10 +124,12 @@ if (isset($_POST['update_user'])) {
         body {
             background: #f5f5f5;
             color: #333;
+            padding-top: 80px;
         }
 
         .container {
-            padding-top: 80px;
+            display: flex;
+            min-height: 100vh;
         }
 
         .main-content {
@@ -131,21 +137,21 @@ if (isset($_POST['update_user'])) {
             padding: 40px;
         }
 
-        .manage-user h1 {
-            font-size: 2rem;
-            color: #1a5c5f;
-            margin-bottom: 30px;
-            text-align: center;
-        }
-
-        .add-admin form {
+        .add-products form {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             padding: 30px;
             border-radius: 10px;
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
             max-width: 600px;
-            margin: 0 auto 40px;
+            margin: 0 auto;
+        }
+
+        .add-products h1 {
+            font-size: 1.8rem;
+            color: #1a5c5f;
+            margin-bottom: 20px;
+            text-align: center;
         }
 
         .input-field {
@@ -160,7 +166,7 @@ if (isset($_POST['update_user'])) {
         }
 
         .input-field input,
-        .input-field select {
+        .input-field textarea {
             width: 100%;
             padding: 12px;
             border: 1px solid rgba(0, 0, 0, 0.1);
@@ -170,58 +176,26 @@ if (isset($_POST['update_user'])) {
         }
 
         .input-field input:focus,
-        .input-field select:focus {
+        .input-field textarea:focus {
             outline: none;
             border-color: #2e8b8f;
         }
 
-        .box-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-        }
-
-        .box {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s;
-            text-align: center;
-        }
-
-        .box:hover {
-            transform: translateY(-5px);
-        }
-
-        .box p {
-            font-size: 0.9rem;
-            color: #666;
-            margin-bottom: 10px;
-        }
-
-        .box p span {
-            color: #2e8b8f;
-            font-weight: 500;
+        .input-field textarea {
+            height: 100px;
+            resize: vertical;
         }
 
         .btn {
             background: #2e8b8f;
             color: white;
-            padding: 8px 15px;
+            padding: 12px 20px;
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            width: 100%;
             font-weight: 500;
             transition: background 0.3s, transform 0.2s;
-            text-decoration: none;
-            display: inline-block;
-            margin: 5px;
-        }
-
-        .btn.delete {
-            background: #e57373;
         }
 
         .btn:hover {
@@ -229,22 +203,73 @@ if (isset($_POST['update_user'])) {
             transform: translateY(-2px);
         }
 
-        .btn.delete:hover {
-            background: #d32f2f;
+        .show-products .box-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+            gap: 20px;
+            margin-top: 40px;
         }
 
-        .message {
-            position: fixed;
-            top: 20px;
-            right: 20px;
+        .show-products .box {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
-            padding: 15px;
-            border-radius: 5px;
+            padding: 20px;
+            border-radius: 10px;
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            text-align: center;
+            transition: transform 0.3s;
+        }
+
+        .show-products .box:hover {
+            transform: translateY(-5px);
+        }
+
+        .show-products .box img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 5px;
+            margin-bottom: 15px;
+        }
+
+        .show-products .box h4 {
+            font-size: 1.2rem;
             color: #1a5c5f;
+            margin-bottom: 10px;
+        }
+
+        .show-products .box p {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 15px;
+        }
+
+        .edit, .delete {
+            display: inline-block;
+            padding: 8px 15px;
+            margin: 5px;
+            border-radius: 5px;
+            text-decoration: none;
             font-weight: 500;
-            z-index: 1000;
+            transition: background 0.3s, color 0.3s;
+        }
+
+        .edit {
+            background: #2e8b8f;
+            color: white;
+        }
+
+        .edit:hover {
+            background: #1a5c5f;
+        }
+
+        .delete {
+            background: #e57373;
+            color: white;
+        }
+
+        .delete:hover {
+            background: #d32f2f;
         }
 
         .update-container {
@@ -270,6 +295,28 @@ if (isset($_POST['update_user'])) {
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
         }
 
+        .update-container img {
+            width: 100%;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 5px;
+            margin-bottom: 20px;
+        }
+
+        .message {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 15px;
+            border-radius: 5px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            color: #1a5c5f;
+            font-weight: 500;
+            z-index: 1000;
+        }
+
         input:-webkit-autofill,
         input:-webkit-autofill:hover,
         input:-webkit-autofill:focus,
@@ -289,12 +336,12 @@ if (isset($_POST['update_user'])) {
                 padding: 20px;
             }
 
-            .box-container {
-                grid-template-columns: 1fr;
+            .add-products form {
+                max-width: 100%;
             }
 
-            .add-admin form {
-                max-width: 100%;
+            .show-products .box-container {
+                grid-template-columns: 1fr;
             }
         }
     </style>
@@ -304,111 +351,120 @@ if (isset($_POST['update_user'])) {
     <div class="container">
         <main class="main-content">
             <?php
-                if (!empty($message)) {
-                    foreach ($message as $msg) {
-                        echo '<div class="message">' . htmlspecialchars($msg) . '</div>';
-                    }
+            if (!empty($message)) {
+                foreach ($message as $msg) {
+                    echo '<div class="message"><span>' . htmlspecialchars($msg) . '</span></div>';
                 }
+            }
             ?>
-            <section class="add-admin">
-                <form method="post" action="">
-                    <h1>Add New Admin</h1>
+            <section class="add-products">
+                <form method="post" action="" enctype="multipart/form-data">
+                    <h1>Add New Product</h1>
                     <div class="input-field">
-                        <label>Username</label>
+                        <label>Product Name</label>
                         <input type="text" name="name" required>
                     </div>
                     <div class="input-field">
-                        <label>Email</label>
-                        <input type="email" name="email" required>
+                        <label>Product Price</label>
+                        <input type="number" step="0.01" min="0" name="price" required>
                     </div>
                     <div class="input-field">
-                        <label>Password</label>
-                        <input type="password" name="password" required>
+                        <label>Discount (e.g., 10%)</label>
+                        <input type="text" name="sale" placeholder="e.g., 10%">
                     </div>
-                    <button type="submit" name="add_admin" class="btn">Add Admin</button>
+                    <div class="input-field">
+                        <label>Product Detail</label>
+                        <textarea name="detail" required></textarea>
+                    </div>
+                    <div class="input-field">
+                        <label>Product Image</label>
+                        <input type="file" name="image" accept="image/*" required>
+                    </div>
+                    <button type="submit" name="add-product" class="btn">Add Product</button>
                 </form>
             </section>
-            <section class="manage-user">
-                <h1>Admin Accounts</h1>
+            <section class="show-products">
                 <div class="box-container">
                     <?php
-                        function display_users($user_type) {
-                            global $conn;
-                            $stmt = $conn->prepare("SELECT * FROM users WHERE user_type = ?");
-                            $stmt->bind_param("s", $user_type);
-                            $stmt->execute();
-                            $result = $stmt->get_result();
-                            if ($result->num_rows > 0) {
-                                while ($user = $result->fetch_assoc()) {
+                    $stmt = $conn->prepare("SELECT * FROM products");
+                    $stmt->execute();
+                    $result = $stmt->get_result();
+                    if ($result->num_rows > 0) {
+                        while ($product = $result->fetch_assoc()) {
                     ?>
                     <div class="box">
-                        <p>ID: <span><?php echo htmlspecialchars($user['id']); ?></span></p>
-                        <p>Username: <span><?php echo htmlspecialchars($user['name']); ?></span></p>
-                        <p>Email: <span><?php echo htmlspecialchars($user['email']); ?></span></p>
-                        <p>Status: <span style="color: <?php echo $user['status'] === 'Online' ? 'green' : 'red'; ?>">
-                            <?php echo htmlspecialchars(ucfirst($user['status'])); ?></span></p>
-                        <a href="#" class="btn" 
-                           onclick="openEditModal(<?php echo htmlspecialchars($user['id']); ?>, 
-                           '<?php echo htmlspecialchars($user['name']); ?>', 
-                           '<?php echo htmlspecialchars($user['email']); ?>', 
-                           '<?php echo htmlspecialchars($user['status']); ?>', 
-                           '<?php echo htmlspecialchars($user['user_type']); ?>')">Edit</a>
-                        <a href="?delete=<?php echo htmlspecialchars($user['id']); ?>" 
-                           class="btn delete" 
-                           onclick="return confirm('Delete this user?')">Delete</a>
+                        <img src="image/<?php echo htmlspecialchars($product['image']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>">
+                        <h4><?php echo htmlspecialchars($product['name']); ?></h4>
+                        <p>Price: $<?php echo number_format($product['price'], 2); ?></p>
+                        <p>Discount: <?php echo htmlspecialchars($product['sale'] ?: 'None'); ?></p>
+                        <p><?php echo htmlspecialchars($product['product_detail']); ?></p>
+                        <a href="#" class="edit"
+                           data-id="<?php echo htmlspecialchars($product['id']); ?>"
+                           data-name="<?php echo htmlspecialchars($product['name']); ?>"
+                           data-price="<?php echo htmlspecialchars($product['price']); ?>"
+                           data-sale="<?php echo htmlspecialchars($product['sale']); ?>"
+                           data-detail="<?php echo htmlspecialchars($product['product_detail']); ?>"
+                           data-image="image/<?php echo htmlspecialchars($product['image']); ?>"
+                           onclick="openEditModal(this)">Edit</a>
+                        <a href="admin_product.php?delete=<?php echo htmlspecialchars($product['id']); ?>"
+                           class="delete"
+                           onclick="return confirm('Delete this product?')">Delete</a>
                     </div>
                     <?php
-                                }
-                            }
                         }
-                        display_users('admin');
+                    } else {
+                        echo '<p>No products found.</p>';
+                    }
+                    $stmt->close();
                     ?>
-                </div>
-            </section>
-            <section class="manage-user">
-                <h1>Customer Accounts</h1>
-                <div class="box-container">
-                    <?php display_users('user'); ?>
                 </div>
             </section>
         </main>
     </div>
     <section class="update-container" id="updateModal">
-        <form method="post" action="">
-            <input type="hidden" name="user_id" id="userId">
+        <form method="post" action="" enctype="multipart/form-data" id="updateForm">
+            <img id="updateImage" src="" alt="Product Image">
+            <input type="hidden" name="update_p_id" id="updateId">
             <div class="input-field">
-                <label>Username</label>
-                <input type="text" name="name" id="userName" required>
+                <label>Product Name</label>
+                <input type="text" name="update_p_name" id="updateName" required>
             </div>
             <div class="input-field">
-                <label>Email</label>
-                <input type="email" name="email" id="userEmail" required>
+                <label>Product Price</label>
+                <input type="number" step="0.01" min="0" name="update_p_price" id="updatePrice" required>
             </div>
-            <?php if ($_GET['user_type'] !== 'user') { ?>
             <div class="input-field">
-                <label>Password (Leave blank to keep unchanged)</label>
-                <input type="password" name="password" id="userPassword">
+                <label>Discount (e.g., 10%)</label>
+                <input type="text" name="update_p_sale" id="updateSale" placeholder="e.g., 10%">
             </div>
-            <?php } ?>
             <div class="input-field">
-                <label>Status</label>
-                <select name="status" id="userStatus" required>
-                    <option value="Online">Online</option>
-                    <option value="Offline">Offline</option>
-                </select>
+                <label>Product Detail</label>
+                <textarea name="update_p_detail" id="updateDetail" required></textarea>
             </div>
-            <input type="hidden" name="user_type" id="userType">
-            <button type="submit" name="update_user" class="btn">Update</button>
-            <button type="button" class="btn delete" onclick="closeModal()">Cancel</button>
+            <div class="input-field">
+                <label>Product Image</label>
+                <input type="file" name="update_p_image" accept="image/*">
+            </div>
+            <button type="submit" name="update_product" class="btn">Update</button>
+            <button type="button" class="btn" style="background: #e57373;" onclick="closeModal()">Cancel</button>
         </form>
     </section>
     <script>
-        function openEditModal(id, name, email, status, user_type) {
-            document.getElementById('userId').value = id;
-            document.getElementById('userName').value = name;
-            document.getElementById('userEmail').value = email;
-            document.getElementById('userStatus').value = status;
-            document.getElementById('userType').value = user_type;
+        function openEditModal(element) {
+            const id = element.getAttribute('data-id');
+            const name = element.getAttribute('data-name');
+            const price = element.getAttribute('data-price');
+            const sale = element.getAttribute('data-sale');
+            const detail = element.getAttribute('data-detail');
+            const imageUrl = element.getAttribute('data-image');
+
+            document.getElementById('updateId').value = id;
+            document.getElementById('updateName').value = name;
+            document.getElementById('updatePrice').value = price;
+            document.getElementById('updateSale').value = sale;
+            document.getElementById('updateDetail').value = detail;
+            document.getElementById('updateImage').src = imageUrl;
+
             document.getElementById('updateModal').style.display = 'flex';
         }
 
