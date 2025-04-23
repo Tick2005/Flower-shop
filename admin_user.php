@@ -9,15 +9,6 @@ if (!isset($admin_id)) {
 
 $message = [];
 
-if (isset($_POST['logout'])) {
-    $stmt = $conn->prepare("UPDATE users SET status = 'Offline' WHERE id = ?");
-    $stmt->bind_param("i", $admin_id);
-    $stmt->execute();
-    session_destroy();
-    header('location: login.php');
-    exit();
-}
-
 if (isset($_GET['delete'])) {
     $user_id = filter_var($_GET['delete'], FILTER_SANITIZE_NUMBER_INT);
     $stmt = $conn->prepare("DELETE FROM users WHERE id = ?");
