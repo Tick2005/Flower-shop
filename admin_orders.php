@@ -1,9 +1,10 @@
 <?php
-include 'connection.php';
+ob_start(); // Start output buffering
 session_start();
+include 'connection.php';
 
 // Session timeout
-$timeout_duration = 1800; // 30 minutes
+$timeout_duration = 600;
 if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY']) > $timeout_duration) {
     session_unset();
     session_destroy();
@@ -18,6 +19,11 @@ if (!$admin_id) {
     $_SESSION['message'] = 'Please log in as an admin to access this page.';
     header('Location: login.php');
     exit();
+}
+
+// Generate CSRF token if not set
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
 // Initialize message array
@@ -47,19 +53,18 @@ if (isset($_POST['confirm_order']) && isset($_POST['csrf_token']) && $_POST['csr
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Orders - Flower Shop</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Roboto', sans-serif;
         }
 
         body {
             background: #f5f5f5;
-            color: #333;
-            padding-top: 80px;
+            color: #4a3c31;
         }
 
         .container {
@@ -70,18 +75,21 @@ if (isset($_POST['confirm_order']) && isset($_POST['csrf_token']) && $_POST['csr
         .main-content {
             flex: 1;
             padding: 40px;
+            margin-left: 250px;
         }
 
         .orders h1 {
-            font-size: 2rem;
-            color: #1a5c5f;
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            color: #4a3c31;
             margin-bottom: 30px;
             text-align: center;
         }
 
         .orders h2 {
-            font-size: 1.5rem;
-            color: #2e8b8f;
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            color: #4a3c31;
             margin: 20px 0 15px;
         }
 
@@ -112,12 +120,12 @@ if (isset($_POST['confirm_order']) && isset($_POST['csrf_token']) && $_POST['csr
         }
 
         .box p span {
-            color: #2e8b8f;
+            color: #b89b72;
             font-weight: 500;
         }
 
         .btn {
-            background: #2e8b8f;
+            background: #b89b72;
             color: white;
             padding: 8px 15px;
             border: none;
@@ -130,28 +138,19 @@ if (isset($_POST['confirm_order']) && isset($_POST['csrf_token']) && $_POST['csr
         }
 
         .btn:hover {
-            background: #1a5c5f;
+            background: #a68a64;
             transform: translateY(-2px);
-        }
-
-        .confirm-btn {
-            background: #4caf50;
-        }
-
-        .confirm-btn:hover {
-            background: #388e3c;
         }
 
         .message {
             position: fixed;
             top: 20px;
             right: 20px;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
+            background: #f8d7da;
+            color: #721c24;
             padding: 15px;
             border-radius: 5px;
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-            color: #1a5c5f;
             font-weight: 500;
             z-index: 1000;
         }
@@ -174,6 +173,7 @@ if (isset($_POST['confirm_order']) && isset($_POST['csrf_token']) && $_POST['csr
 
             .main-content {
                 padding: 20px;
+                margin-left: 0;
             }
 
             .box-container {
@@ -220,7 +220,7 @@ if (isset($_POST['confirm_order']) && isset($_POST['csrf_token']) && $_POST['csr
                         <form action="" method="POST" style="margin-top: 10px;">
                             <input type="hidden" name="order_id" value="<?php echo $order['id']; ?>">
                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
-                            <button type="submit" name="confirm_order" class="btn confirm-btn">Confirm Order</button>
+                            <button type="submit" name="confirm_order" class="btn">Confirm Order</button>
                         </form>
                         <!-- Status Log -->
                         <div class="status-log">
@@ -344,3 +344,6 @@ if (isset($_POST['confirm_order']) && isset($_POST['csrf_token']) && $_POST['csr
     </script>
 </body>
 </html>
+<?php
+ob_end_flush(); // Flush the output buffer
+?>
