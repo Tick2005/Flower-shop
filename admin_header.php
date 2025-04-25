@@ -22,10 +22,9 @@ if (!$admin_id) {
 // Handle logout
 if (isset($_POST['logout'])) {
     try {
-        $stmt = $conn->prepare("UPDATE users SET status = 'Offline', remember_token = NULL WHERE id = ?");
+        $stmt = $conn->prepare("UPDATE users SET status = 'Offline' WHERE id = ?");
         $stmt->bind_param("i", $admin_id);
         $stmt->execute();
-        setcookie('remember_token', '', time() - 3600, '/', '', true, true);
         session_destroy();
         header('Location: login.php');
         exit();
@@ -43,25 +42,25 @@ if (isset($_POST['logout'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Roboto', sans-serif;
         }
 
         .header {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            background: #4a3c31;
+            color: #fff;
             position: fixed;
             top: 0;
             left: 0;
             width: 100%;
             z-index: 1000;
             padding: 15px 20px;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
         }
 
         .navbar {
@@ -73,9 +72,9 @@ if (isset($_POST['logout'])) {
         }
 
         .navbar .logo {
-            font-size: 1.5rem;
-            color: #1a5c5f;
-            font-weight: 600;
+            font-family: 'Playfair Display', serif;
+            font-size: 1.8rem;
+            color: #b89b72;
             text-decoration: none;
         }
 
@@ -88,7 +87,7 @@ if (isset($_POST['logout'])) {
             display: flex;
             align-items: center;
             padding: 10px 15px;
-            color: #333;
+            color: #fff;
             text-decoration: none;
             border-radius: 5px;
             margin: 0 5px;
@@ -101,8 +100,8 @@ if (isset($_POST['logout'])) {
 
         .nav-links a:hover,
         .nav-links a.active {
-            background: #e0f0f0;
-            color: #2e8b8f;
+            background: #b89b72;
+            color: #4a3c31;
         }
 
         .user-menu {
@@ -115,33 +114,34 @@ if (isset($_POST['logout'])) {
             display: flex;
             align-items: center;
             padding: 10px;
-            color: #333;
+            color: #fff;
             cursor: pointer;
             border-radius: 5px;
             transition: background 0.3s;
         }
 
         .user-menu .user-toggle:hover {
-            background: #e0f0f0;
+            background: #b89b72;
+            color: #4a3c31;
         }
 
         .user-menu .user-toggle i {
             margin-right: 8px;
-            color: #2e8b8f;
+            color: #b89b72;
         }
 
         .user-menu .user-info {
             position: absolute;
             top: 100%;
             right: 0;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+            background: #4a3c31;
+            color: #fff;
             border-radius: 5px;
             padding: 15px;
             min-width: 200px;
             display: none;
             z-index: 1000;
+            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
         }
 
         .user-menu.active .user-info {
@@ -150,18 +150,17 @@ if (isset($_POST['logout'])) {
 
         .user-info p {
             font-size: 0.9rem;
-            color: #666;
             margin-bottom: 10px;
         }
 
         .user-info span {
-            color: #2e8b8f;
+            color: #b89b72;
             font-weight: 500;
         }
 
         .btn {
-            background: #2e8b8f;
-            color: white;
+            background: #b89b72;
+            color: #4a3c31;
             padding: 10px;
             border: none;
             border-radius: 5px;
@@ -173,14 +172,14 @@ if (isset($_POST['logout'])) {
         }
 
         .btn:hover {
-            background: #1a5c5f;
+            background: #a68a64;
             transform: translateY(-2px);
         }
 
         .menu-toggle {
             display: none;
             font-size: 1.5rem;
-            color: #2e8b8f;
+            color: #b89b72;
             cursor: pointer;
             padding: 10px;
             border-radius: 5px;
@@ -188,7 +187,8 @@ if (isset($_POST['logout'])) {
         }
 
         .menu-toggle:hover {
-            background: #e0f0f0;
+            background: #b89b72;
+            color: #4a3c31;
         }
 
         @media (max-width: 768px) {
@@ -198,11 +198,10 @@ if (isset($_POST['logout'])) {
                 top: 100%;
                 left: 0;
                 width: 100%;
-                background: rgba(255, 255, 255, 0.95);
-                backdrop-filter: blur(10px);
+                background: #4a3c31;
                 flex-direction: column;
                 padding: 20px;
-                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.1);
+                box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
             }
 
             .nav-links.active {
@@ -228,7 +227,7 @@ if (isset($_POST['logout'])) {
 <body>
     <header class="header">
         <nav class="navbar">
-            <a href="admin.php" class="logo">Flower Shop Admin</a>
+            <a href="admin.php" class="logo">Luxe Blossom Admin</a>
             <div class="nav-links" id="nav-links">
                 <a href="admin.php" <?php echo basename($_SERVER['PHP_SELF']) == 'admin.php' ? 'class="active"' : ''; ?>><i class="fas fa-home"></i> Dashboard</a>
                 <a href="admin_product.php" <?php echo basename($_SERVER['PHP_SELF']) == 'admin_product.php' ? 'class="active"' : ''; ?>><i class="fas fa-box"></i> Products</a>
