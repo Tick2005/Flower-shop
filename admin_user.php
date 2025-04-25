@@ -29,112 +29,90 @@ if (!isset($_SESSION['csrf_token'])) {
 
 $message = [];
 
-// Handle delete product
+// Handle delete user
 if (isset($_GET['delete']) && isset($_GET['csrf_token']) && $_GET['csrf_token'] === $_SESSION['csrf_token']) {
-    $delete_id = filter_var($_GET['delete'], FILTER_VALIDATE_INT);
-    if ($delete_id) {
-        $stmt = $conn->prepare("DELETE FROM products WHERE id = ?");
-        $stmt->bind_param("i", $delete_id);
+    $user_id = filter_var($_GET['delete'], FILTER_VALIDATE_INT);
+    if ($user_id) {
+        $stmt = $conn->prepare("DELETE FROM users WHERE id = ?");
+        $stmt->bind_param("i", $user_id);
         if ($stmt->execute()) {
-            $message[] = 'Product deleted successfully.';
+            $message[] = "User deleted successfully.";
         } else {
-            $message[] = 'Failed to delete product.';
+            $message[] = "Failed to delete user.";
         }
         $stmt->close();
     }
-    header('Location: admin_product.php');
+    header('Location: admin_user.php');
     exit();
 }
 
-// Handle add product
-if (isset($_POST['add-product']) && isset($_POST['csrf_token']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
-    $product_name = filter_var($_POST['name'], FILTER_SANITIZE_STRING);
-    $product_price = filter_var($_POST['price'], FILTER_VALIDATE_FLOAT);
-    $sale = filter_var($_POST['sale'] ?? 0, FILTER_VALIDATE_FLOAT);
-    $product_detail = filter_var($_POST['detail'], FILTER_SANITIZE_STRING);
-    $origin = filter_var($_POST['origin'], FILTER_SANITIZE_STRING);
-    $type = filter_var($_POST['type'], FILTER_SANITIZE_STRING);
-    $image = $_FILES['image']['name'] ? basename($_FILES['image']['name']) : null;
-    $image_size = $_FILES['image']['size'];
-    $image_tmp_name = $_FILES['image']['tmp_name'];
-    $image_folder = 'image/' . $image;
+// Handle add admin
+if (isset($_POST['add_admin']) && isset($_POST['csrf_token']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
+    $name = filter_var($_POST['name'], FILTER_SANITIZE_STRING);
+    $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
+    $password = filter_var($_POST['password'], FILTER_SANITIZE_STRING);
 
-    // Validate inputs
-    if (!$product_name || !$product_price || !$product_detail || !$image) {
-        $message[] = 'All required fields must be filled.';
-    } elseif ($sale < 0 || $sale > 100) {
-        $message[] = 'Discount must be between 0 and 100%.';
-    } elseif (!in_array($type, ['birthday', 'wedding', 'bouquet', 'condolence', 'basket', 'other', ''])) {
-        $message[] = 'Invalid product type.';
+    if (strlen($password) < 8) {
+        $message[] = "Password must be at least 8 characters long.";
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $message[] = "Invalid email format.";
     } else {
-        // Check if product name exists
-        $stmt = $conn->prepare("SELECT id FROM products WHERE name = ?");
-        $stmt->bind_param("s", $product_name);
+        $stmt = $conn->prepare("SELECT id FROM users WHERE email = ? OR name = ?");
+        $stmt->bind_param("ss", $email, $name);
         $stmt->execute();
         if ($stmt->get_result()->num_rows > 0) {
-            $message[] = 'Product name already exists.';
+            $message[] = "Email or username already exists.";
         } else {
-            // Validate image
-            if ($image_size > 2000000) {
-                $message[] = 'Product image size is too large.';
-            } elseif (!in_array(pathinfo($image, PATHINFO_EXTENSION), ['jpg', 'jpeg', 'png', 'gif'])) {
-                $message[] = 'Invalid image format. Use JPG, PNG, or GIF.';
+            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+            $user_type = 'admin';
+            $stmt = $conn->prepare("INSERT INTO users (name, email, password, user_type, status) VALUES (?, ?, ?, ?, 'Offline')");
+            $stmt->bind_param("ssss", $name, $email, $hashed_password, $user_type);
+            if ($stmt->execute()) {
+                $message[] = "Admin account added successfully.";
             } else {
-                $stmt = $conn->prepare("INSERT INTO products (name, price, sale, product_detail, origin, type, image) VALUES (?, ?, ?, ?, ?, ?, ?)");
-                $stmt->bind_param("sddssss", $product_name, $product_price, $sale, $product_detail, $origin, $type, $image);
-                if ($stmt->execute() && move_uploaded_file($image_tmp_name, $image_folder)) {
-                    $message[] = 'Product added successfully.';
-                } else {
-                    $message[] = 'Failed to add product.';
-                }
+                $message[] = "Failed to add admin account.";
             }
         }
         $stmt->close();
     }
 }
 
-// Handle update product
-if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
-    $update_id = filter_var($_POST['update_p_id'], FILTER_VALIDATE_INT);
-    $update_name = filter_var($_POST['update_p_name'], FILTER_SANITIZE_STRING);
-    $update_price = filter_var($_POST['update_p_price'], FILTER_VALIDATE_FLOAT);
-    $update_sale = filter_var($_POST['update_p_sale'] ?? 0, FILTER_VALIDATE_FLOAT);
-    $update_detail = filter_var($_POST['update_p_detail'], FILTER_SANITIZE_STRING);
-    $update_origin = filter_var($_POST['update_p_origin'], FILTER_SANITIZE_STRING);
-    $update_type = filter_var($_POST['update_p_type'], FILTER_SANITIZE_STRING);
+// Handle update user
+if (isset($_POST['update_user']) && isset($_POST['csrf_token']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
+    $user_id = filter_var($_POST['user_id'], FILTER_VALIDATE_INT);
+    $name = filter_var($_POST['name'], FILTER_SANITIZE_STRING);
+    $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
+    $status = filter_var($_POST['status'], FILTER_SANITIZE_STRING);
+    $user_type = filter_var($_POST['user_type'], FILTER_SANITIZE_STRING);
+    $password = !empty($_POST['password']) ? filter_var($_POST['password'], FILTER_SANITIZE_STRING) : null;
 
-    // Validate inputs
-    if (!$update_id || !$update_name || !$update_price || !$update_detail) {
-        $message[] = 'All required fields must be filled.';
-    } elseif ($update_sale < 0 || $update_sale > 100) {
-        $message[] = 'Discount must be between 0 and 100%.';
-    } elseif (!in_array($update_type, ['birthday', 'wedding', 'bouquet', 'condolence', 'basket', 'other', ''])) {
-        $message[] = 'Invalid product type.';
+    if (!$user_id || !in_array($user_type, ['user', 'admin']) || !in_array($status, ['Online', 'Offline'])) {
+        $message[] = "Invalid input data.";
+    } elseif (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $message[] = "Invalid email format.";
     } else {
-        if (!empty($_FILES['update_p_image']['name'])) {
-            $update_image = basename($_FILES['update_p_image']['name']);
-            $update_image_tmp = $_FILES['update_p_image']['tmp_name'];
-            $update_folder = 'image/' . $update_image;
-            if ($_FILES['update_p_image']['size'] > 2000000) {
-                $message[] = 'Image size is too large.';
-            } elseif (!in_array(pathinfo($update_image, PATHINFO_EXTENSION), ['jpg', 'jpeg', 'png', 'gif'])) {
-                $message[] = 'Invalid image format. Use JPG, PNG, or GIF.';
-            } else {
-                $stmt = $conn->prepare("UPDATE products SET name = ?, price = ?, sale = ?, product_detail = ?, origin = ?, type = ?, image = ? WHERE id = ?");
-                $stmt->bind_param("sddssssi", $update_name, $update_price, $update_sale, $update_detail, $update_origin, $update_type, $update_image, $update_id);
-                if ($stmt->execute() && move_uploaded_file($update_image_tmp, $update_folder)) {
-                    $message[] = 'Product updated successfully.';
-                } else {
-                    $message[] = 'Failed to update product.';
-                }
-            }
+        $stmt = $conn->prepare("SELECT id FROM users WHERE (email = ? OR name = ?) AND id != ?");
+        $stmt->bind_param("ssi", $email, $name, $user_id);
+        $stmt->execute();
+        if ($stmt->get_result()->num_rows > 0) {
+            $message[] = "Email or username already exists.";
         } else {
-            $stmt = $conn->prepare("UPDATE products SET name = ?, price = ?, sale = ?, product_detail = ?, origin = ?, type = ? WHERE id = ?");
-            $stmt->bind_param("sddsssi", $update_name, $update_price, $update_sale, $update_detail, $update_origin, $update_type, $update_id);
-            if ($stmt->execute()) {
-                $message[] = 'Product updated successfully.';
+            if ($password && strlen($password) < 8) {
+                $message[] = "Password must be at least 8 characters long.";
             } else {
-                $message[] = 'Failed to update product.';
+                if ($password) {
+                    $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+                    $stmt = $conn->prepare("UPDATE users SET name = ?, email = ?, password = ?, status = ?, user_type = ? WHERE id = ?");
+                    $stmt->bind_param("sssssi", $name, $email, $hashed_password, $status, $user_type, $user_id);
+                } else {
+                    $stmt = $conn->prepare("UPDATE users SET name = ?, email = ?, status = ?, user_type = ? WHERE id = ?");
+                    $stmt->bind_param("ssssi", $name, $email, $status, $user_type, $user_id);
+                }
+                if ($stmt->execute()) {
+                    $message[] = "User updated successfully.";
+                } else {
+                    $message[] = "Failed to update user.";
+                }
             }
         }
         $stmt->close();
@@ -147,7 +125,7 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Product Management - Flower Shop</title>
+    <title>Admin Users - Flower Shop</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
     <style>
@@ -174,22 +152,22 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
             margin-left: 250px;
         }
 
-        .add-products form {
+        .manage-user h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            color: #4a3c31;
+            margin-bottom: 30px;
+            text-align: center;
+        }
+
+        .add-admin form {
             background: rgba(255, 255, 255, 0.95);
             backdrop-filter: blur(10px);
             padding: 30px;
             border-radius: 10px;
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
             max-width: 600px;
-            margin: 0 auto;
-        }
-
-        .add-products h1 {
-            font-family: 'Playfair Display', serif;
-            font-size: 2.5rem;
-            color: #4a3c31;
-            margin-bottom: 20px;
-            text-align: center;
+            margin: 0 auto 40px;
         }
 
         .input-field {
@@ -204,7 +182,6 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
         }
 
         .input-field input,
-        .input-field textarea,
         .input-field select {
             width: 100%;
             padding: 12px;
@@ -216,27 +193,58 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
         }
 
         .input-field input:focus,
-        .input-field textarea:focus,
         .input-field select:focus {
             outline: none;
             border-color: #b89b72;
         }
 
-        .input-field textarea {
-            height: 100px;
-            resize: vertical;
+        .box-container {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+        }
+
+        .box {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            transition: transform 0.3s;
+            text-align: center;
+        }
+
+        .box:hover {
+            transform: translateY(-5px);
+        }
+
+        .box p {
+            font-size: 0.9rem;
+            color: #666;
+            margin-bottom: 10px;
+        }
+
+        .box p span {
+            color: #b89b72;
+            font-weight: 500;
         }
 
         .btn {
             background: #b89b72;
             color: white;
-            padding: 12px 20px;
+            padding: 8px 15px;
             border: none;
             border-radius: 5px;
             cursor: pointer;
-            width: 100%;
             font-weight: 500;
             transition: background 0.3s, transform 0.2s;
+            text-decoration: none;
+            display: inline-block;
+            margin: 5px;
+        }
+
+        .btn.delete {
+            background: #e57373;
         }
 
         .btn:hover {
@@ -244,76 +252,8 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
             transform: translateY(-2px);
         }
 
-        .show-products .box-container {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-            gap: 20px;
-            margin-top: 40px;
-        }
-
-        .show-products .box {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-            text-align: center;
-            transition: transform 0.3s;
-        }
-
-        .show-products .box:hover {
-            transform: translateY(-5px);
-        }
-
-        .show-products .box img {
-            width: 100%;
-            height: 150px;
-            object-fit: cover;
-            border-radius: 5px;
-            margin-bottom: 15px;
-        }
-
-        .show-products .box h4 {
-            font-family: 'Playfair Display', serif;
-            font-size: 1.2rem;
-            color: #4a3c31;
-            margin-bottom: 10px;
-        }
-
-        .show-products .box p {
-            font-size: 0.9rem;
-            color: #666;
-            margin-bottom: 15px;
-        }
-
-        .edit, .delete {
-            display: inline-block;
-            padding: 8px 15px;
-            margin: 5px;
-            border-radius: 5px;
-            text-decoration: none;
-            font-weight: 500;
-            transition: background 0.3s, transform 0.2s;
-        }
-
-        .edit {
-            background: #b89b72;
-            color: white;
-        }
-
-        .edit:hover {
-            background: #a68a64;
-            transform: translateY(-2px);
-        }
-
-        .delete {
-            background: #e57373;
-            color: white;
-        }
-
-        .delete:hover {
+        .btn.delete:hover {
             background: #d32f2f;
-            transform: translateY(-2px);
         }
 
         .update-container {
@@ -339,14 +279,6 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
         }
 
-        .update-container img {
-            width: 100%;
-            height: 150px;
-            object-fit: cover;
-            border-radius: 5px;
-            margin-bottom: 20px;
-        }
-
         .message {
             position: fixed;
             top: 20px;
@@ -362,23 +294,25 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
         .menu-toggle {
             display: none;
         }
+
+
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
             }
             .menu-toggle {
             display: block;
-            }
+        }
             .main-content {
                 padding: 20px;
                 margin-left: 0;
             }
 
-            .add-products form {
+            .add-admin form {
                 max-width: 100%;
             }
 
-            .show-products .box-container {
+            .box-container {
                 grid-template-columns: 1fr;
             }
         }
@@ -387,91 +321,63 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
 <body>
     <div class="container">
         <main class="main-content">
-            <?php
-            if (!empty($message)) {
-                foreach ($message as $msg) {
-                    echo '<div class="message">' . htmlspecialchars($msg) . '</div>';
+            <section class="manage-user">
+                <h1>User Management</h1>
+                <?php
+                if (!empty($message)) {
+                    foreach ($message as $msg) {
+                        echo '<div class="message">' . htmlspecialchars($msg) . '</div>';
+                    }
                 }
-            }
-            ?>
-            <section class="add-products">
-                <form method="post" action="" enctype="multipart/form-data">
-                    <h1>Add New Product</h1>
-                    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
-                    <div class="input-field">
-                        <label>Product Name</label>
-                        <input type="text" name="name" required>
-                    </div>
-                    <div class="input-field">
-                        <label>Product Price</label>
-                        <input type="number" step="0.01" min="0" name="price" required>
-                    </div>
-                    <div class="input-field">
-                        <label>Discount (%)</label>
-                        <input type="number" step="0.01" min="0" max="100" name="sale" placeholder="e.g., 10">
-                    </div>
-                    <div class="input-field">
-                        <label>Product Detail</label>
-                        <textarea name="detail" required></textarea>
-                    </div>
-                    <div class="input-field">
-                        <label>Origin</label>
-                        <input type="text" name="origin" placeholder="e.g., Vietnam">
-                    </div>
-                    <div class="input-field">
-                        <label>Product Type</label>
-                        <select name="type">
-                            <option value="">Select type</option>
-                            <option value="birthday">Birthday</option>
-                            <option value="wedding">Wedding</option>
-                            <option value="bouquet">Bouquet</option>
-                            <option value="condolence">Condolence</option>
-                            <option value="basket">Basket</option>
-                            <option value="other">Other</option>
-                        </select>
-                    </div>
-                    <div class="input-field">
-                        <label>Product Image</label>
-                        <input type="file" name="image" accept="image/jpeg,image/png,image/gif" required>
-                    </div>
-                    <button type="submit" name="add-product" class="btn">Add Product</button>
-                </form>
-            </section>
-            <section class="show-products">
+                ?>
+                <div class="add-admin">
+                    <form action="" method="post">
+                        <h1>Add New Admin</h1>
+                        <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
+                        <div class="input-field">
+                            <label>Username</label>
+                            <input type="text" name="name" required>
+                        </div>
+                        <div class="input-field">
+                            <label>Email</label>
+                            <input type="email" name="email" required>
+                        </div>
+                        <div class="input-field">
+                            <label>Password</label>
+                            <input type="password" name="password" required>
+                        </div>
+                        <button type="submit" name="add_admin" class="btn">Add Admin</button>
+                    </form>
+                </div>
                 <div class="box-container">
                     <?php
-                    $stmt = $conn->prepare("SELECT * FROM products");
+                    $stmt = $conn->prepare("SELECT * FROM users");
                     $stmt->execute();
                     $result = $stmt->get_result();
                     if ($result->num_rows > 0) {
-                        while ($product = $result->fetch_assoc()) {
+                        while ($user = $result->fetch_assoc()) {
                     ?>
                     <div class="box">
-                        <img src="image/<?php echo htmlspecialchars($product['image']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>">
-                        <h4><?php echo htmlspecialchars($product['name']); ?></h4>
-                        <p>Price: $<?php echo number_format($product['price'], 2); ?></p>
-                        <p>Discount: <?php echo $product['sale'] ? number_format($product['sale'], 2) . '%' : 'None'; ?></p>
-                        <p>Origin: <?php echo htmlspecialchars($product['origin'] ?: 'N/A'); ?></p>
-                        <p>Type: <?php echo htmlspecialchars(ucfirst($product['type'] ?: 'N/A')); ?></p>
-                        <p><?php echo htmlspecialchars($product['product_detail']); ?></p>
-                        <a href="#" class="edit"
-                           data-id="<?php echo htmlspecialchars($product['id']); ?>"
-                           data-name="<?php echo htmlspecialchars($product['name']); ?>"
-                           data-price="<?php echo htmlspecialchars($product['price']); ?>"
-                           data-sale="<?php echo htmlspecialchars($product['sale']); ?>"
-                           data-detail="<?php echo htmlspecialchars($product['product_detail']); ?>"
-                           data-origin="<?php echo htmlspecialchars($product['origin']); ?>"
-                           data-type="<?php echo htmlspecialchars($product['type']); ?>"
-                           data-image="image/<?php echo htmlspecialchars($product['image']); ?>"
+                        <p>User ID: <span><?php echo htmlspecialchars($user['id']); ?></span></p>
+                        <p>Username: <span><?php echo htmlspecialchars($user['name']); ?></span></p>
+                        <p>Email: <span><?php echo htmlspecialchars($user['email']); ?></span></p>
+                        <p>Status: <span><?php echo htmlspecialchars($user['status']); ?></span></p>
+                        <p>User Type: <span><?php echo htmlspecialchars(ucfirst($user['user_type'])); ?></span></p>
+                        <a href="#" class="btn"
+                           data-id="<?php echo htmlspecialchars($user['id']); ?>"
+                           data-name="<?php echo htmlspecialchars($user['name']); ?>"
+                           data-email="<?php echo htmlspecialchars($user['email']); ?>"
+                           data-status="<?php echo htmlspecialchars($user['status']); ?>"
+                           data-user_type="<?php echo htmlspecialchars($user['user_type']); ?>"
                            onclick="openEditModal(this)">Edit</a>
-                        <a href="admin_product.php?delete=<?php echo htmlspecialchars($product['id']); ?>&csrf_token=<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>"
-                           class="delete"
-                           onclick="return confirm('Delete this product?')">Delete</a>
+                        <a href="admin_user.php?delete=<?php echo htmlspecialchars($user['id']); ?>&csrf_token=<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>"
+                           class="btn delete"
+                           onclick="return confirm('Delete this user?')">Delete</a>
                     </div>
                     <?php
                         }
                     } else {
-                        echo '<p>No products found.</p>';
+                        echo '<p>No users found.</p>';
                     }
                     $stmt->close();
                     ?>
@@ -480,47 +386,36 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
         </main>
     </div>
     <section class="update-container" id="updateModal">
-        <form method="post" action="" enctype="multipart/form-data" id="updateForm">
+        <form method="post" action="" id="updateForm">
             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
-            <img id="updateImage" src="" alt="Product Image">
-            <input type="hidden" name="update_p_id" id="updateId">
+            <input type="hidden" name="user_id" id="updateId">
             <div class="input-field">
-                <label>Product Name</label>
-                <input type="text" name="update_p_name" id="updateName" required>
+                <label>Username</label>
+                <input type="text" name="name" id="updateName" required>
             </div>
             <div class="input-field">
-                <label>Product Price</label>
-                <input type="number" step="0.01" min="0" name="update_p_price" id="updatePrice" required>
+                <label>Email</label>
+                <input type="email" name="email" id="updateEmail" required>
             </div>
             <div class="input-field">
-                <label>Discount (%)</label>
-                <input type="number" step="0.01" min="0" max="100" name="update_p_sale" id="updateSale" placeholder="e.g., 10">
+                <label>Password (leave blank to keep unchanged)</label>
+                <input type="password" name="password" id="updatePassword">
             </div>
             <div class="input-field">
-                <label>Product Detail</label>
-                <textarea name="update_p_detail" id="updateDetail" required></textarea>
-            </div>
-            <div class="input-field">
-                <label>Origin</label>
-                <input type="text" name="update_p_origin" id="updateOrigin" placeholder="e.g., Vietnam">
-            </div>
-            <div class="input-field">
-                <label>Product Type</label>
-                <select name="update_p_type" id="updateType">
-                    <option value="">Select type</option>
-                    <option value="birthday">Birthday</option>
-                    <option value="wedding">Wedding</option>
-                    <option value="bouquet">Bouquet</option>
-                    <option value="condolence">Condolence</option>
-                    <option value="basket">Basket</option>
-                    <option value="other">Other</option>
+                <label>Status</label>
+                <select name="status" id="updateStatus" required>
+                    <option value="Online">Online</option>
+                    <option value="Offline">Offline</option>
                 </select>
             </div>
             <div class="input-field">
-                <label>Product Image</label>
-                <input type="file" name="update_p_image" accept="image/jpeg,image/png,image/gif">
+                <label>User Type</label>
+                <select name="user_type" id="updateUserType" required>
+                    <option value="user">User</option>
+                    <option value="admin">Admin</option>
+                </select>
             </div>
-            <button type="submit" name="update_product" class="btn">Update</button>
+            <button type="submit" name="update_user" class="btn">Update</button>
             <button type="button" class="btn delete" onclick="closeModal()">Cancel</button>
         </form>
     </section>
@@ -528,21 +423,16 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
         function openEditModal(element) {
             const id = element.getAttribute('data-id');
             const name = element.getAttribute('data-name');
-            const price = element.getAttribute('data-price');
-            const sale = element.getAttribute('data-sale');
-            const detail = element.getAttribute('data-detail');
-            const origin = element.getAttribute('data-origin');
-            const type = element.getAttribute('data-type');
-            const imageUrl = element.getAttribute('data-image');
+            const email = element.getAttribute('data-email');
+            const status = element.getAttribute('data-status');
+            const userType = element.getAttribute('data-user_type');
 
             document.getElementById('updateId').value = id;
             document.getElementById('updateName').value = name;
-            document.getElementById('updatePrice').value = price;
-            document.getElementById('updateSale').value = sale;
-            document.getElementById('updateDetail').value = detail;
-            document.getElementById('updateOrigin').value = origin || '';
-            document.getElementById('updateType').value = type || '';
-            document.getElementById('updateImage').src = imageUrl;
+            document.getElementById('updateEmail').value = email;
+            document.getElementById('updateStatus').value = status;
+            document.getElementById('updateUserType').value = userType;
+            document.getElementById('updatePassword').value = '';
 
             document.getElementById('updateModal').style.display = 'flex';
         }
