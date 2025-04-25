@@ -3,14 +3,13 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 23, 2025 at 06:45 AM
+-- Generation Time: Apr 25, 2025 at 04:49 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
-
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -134,17 +133,16 @@ CREATE TABLE `users` (
   `email` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
   `status` varchar(255) NOT NULL DEFAULT 'Offline',
-  `user_type` varchar(255) NOT NULL DEFAULT 'user',
-  `remember_token` varchar(255) DEFAULT NULL
+  `user_type` varchar(255) NOT NULL DEFAULT 'user'
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `email`, `password`, `status`, `user_type`, `remember_token`) VALUES
-(7, 'Duong', 'username@gmail.com', '$2y$10$a1Y4h8HMlSPK6uYM0Myc4u3zCjrqY25IFDAo8atl5nM6IWcUv9h.i', 'Offline', 'user', NULL),
-(9, 'admin', 'admin@gmail.com', '$2y$10$n8Gk32v7SkVooSkkJeY4Te5fKy7RO9bVk2Sa6809ph8jRzCIp.A6O', 'Online', 'admin', NULL);
+INSERT INTO `users` (`id`, `name`, `email`, `password`, `status`, `user_type`) VALUES
+(7, 'Duong', 'username@gmail.com', '$2y$10$a1Y4h8HMlSPK6uYM0Myc4u3zCjrqY25IFDAo8atl5nM6IWcUv9h.i', 'Offline', 'user'),
+(9, 'admin', 'admin@gmail.com', '$2y$10$n8Gk32v7SkVooSkkJeY4Te5fKy7RO9bVk2Sa6809ph8jRzCIp.A6O', 'Online', 'admin');
 
 -- --------------------------------------------------------
 
@@ -296,6 +294,7 @@ ALTER TABLE `order_status_log`
 ALTER TABLE `wishlist`
   ADD CONSTRAINT `wishlist_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
   ADD CONSTRAINT `wishlist_ibfk_2` FOREIGN KEY (`pid`) REFERENCES `products` (`id`) ON DELETE CASCADE;
+
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
