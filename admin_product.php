@@ -1,8 +1,11 @@
 <?php
+ob_start(); // Start output buffering
+session_start();
 include 'connection.php';
 include 'admin_header.php';
+
 // Session timeout
-$timeout_duration = 1800; // 30 minutes
+$timeout_duration = 600;
 if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY']) > $timeout_duration) {
     session_unset();
     session_destroy();
@@ -17,6 +20,11 @@ if (!$admin_id) {
     $_SESSION['message'] = 'Please log in as an admin to access this page.';
     header('Location: login.php');
     exit();
+}
+
+// Generate CSRF token if not set
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
 $message = [];
@@ -56,7 +64,7 @@ if (isset($_POST['add-product']) && isset($_POST['csrf_token']) && $_POST['csrf_
         $message[] = 'All required fields must be filled.';
     } elseif ($sale < 0 || $sale > 100) {
         $message[] = 'Discount must be between 0 and 100%.';
-    } elseif (!in_array($type, ['birthday', 'wedding', 'bouquet', 'condolence', 'backet', 'other', ''])) {
+    } elseif (!in_array($type, ['birthday', 'wedding', 'bouquet', 'condolence', 'basket', 'other', ''])) {
         $message[] = 'Invalid product type.';
     } else {
         // Check if product name exists
@@ -100,7 +108,7 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
         $message[] = 'All required fields must be filled.';
     } elseif ($update_sale < 0 || $update_sale > 100) {
         $message[] = 'Discount must be between 0 and 100%.';
-    } elseif (!in_array($update_type, ['birthday', 'wedding', 'bouquet', 'condolence', 'backet', 'other', ''])) {
+    } elseif (!in_array($update_type, ['birthday', 'wedding', 'bouquet', 'condolence', 'basket', 'other', ''])) {
         $message[] = 'Invalid product type.';
     } else {
         if (!empty($_FILES['update_p_image']['name'])) {
@@ -141,30 +149,29 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Product Management - Flower Shop</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Roboto', sans-serif;
         }
 
         body {
             background: #f5f5f5;
-            color: #333;
-            padding-top: 80px;
+            color: #4a3c31;
         }
+
         .container {
             display: flex;
             min-height: 100vh;
         }
-        .menu-toggle{
-            display:none;
-        }
+
         .main-content {
             flex: 1;
             padding: 40px;
+            margin-left: 250px;
         }
 
         .add-products form {
@@ -178,8 +185,9 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
         }
 
         .add-products h1 {
-            font-size: 1.8rem;
-            color: #1a5c5f;
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            color: #4a3c31;
             margin-bottom: 20px;
             text-align: center;
         }
@@ -191,7 +199,7 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
         .input-field label {
             display: block;
             font-weight: 500;
-            color: #1a5c5f;
+            color: #4a3c31;
             margin-bottom: 5px;
         }
 
@@ -200,9 +208,10 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
         .input-field select {
             width: 100%;
             padding: 12px;
-            border: 1px solid rgba(0, 0, 0, 0.1);
+            border: 1px solid #d4c7b0;
             border-radius: 5px;
             background: rgba(255, 255, 255, 0.5);
+            color: #4a3c31;
             transition: border-color 0.3s;
         }
 
@@ -210,7 +219,7 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
         .input-field textarea:focus,
         .input-field select:focus {
             outline: none;
-            border-color: #2e8b8f;
+            border-color: #b89b72;
         }
 
         .input-field textarea {
@@ -219,7 +228,7 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
         }
 
         .btn {
-            background: #2e8b8f;
+            background: #b89b72;
             color: white;
             padding: 12px 20px;
             border: none;
@@ -231,7 +240,7 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
         }
 
         .btn:hover {
-            background: #1a5c5f;
+            background: #a68a64;
             transform: translateY(-2px);
         }
 
@@ -265,8 +274,9 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
         }
 
         .show-products .box h4 {
+            font-family: 'Playfair Display', serif;
             font-size: 1.2rem;
-            color: #1a5c5f;
+            color: #4a3c31;
             margin-bottom: 10px;
         }
 
@@ -283,16 +293,17 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
             border-radius: 5px;
             text-decoration: none;
             font-weight: 500;
-            transition: background 0.3s, color 0.3s;
+            transition: background 0.3s, transform 0.2s;
         }
 
         .edit {
-            background: #2e8b8f;
+            background: #b89b72;
             color: white;
         }
 
         .edit:hover {
-            background: #1a5c5f;
+            background: #a68a64;
+            transform: translateY(-2px);
         }
 
         .delete {
@@ -302,6 +313,7 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
 
         .delete:hover {
             background: #d32f2f;
+            transform: translateY(-2px);
         }
 
         .update-container {
@@ -339,33 +351,27 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
             position: fixed;
             top: 20px;
             right: 20px;
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
+            background: #f8d7da;
+            color: #721c24;
             padding: 15px;
             border-radius: 5px;
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-            color: #1a5c5f;
             font-weight: 500;
             z-index: 1000;
         }
-
-        input:-webkit-autofill,
-        input:-webkit-autofill:hover,
-        input:-webkit-autofill:focus,
-        input:-webkit-autofill:active {
-            -webkit-background-clip: text;
-            -webkit-text-fill-color: #333 !important;
-            background: rgba(255, 255, 255, 0.5) !important;
-            transition: background-color 5000s ease-in-out 0s;
+        .menu-toggle {
+            display: none;
         }
-
         @media (max-width: 768px) {
             .container {
                 flex-direction: column;
             }
-
+            .menu-toggle {
+            display: block;
+            }
             .main-content {
                 padding: 20px;
+                margin-left: 0;
             }
 
             .add-products form {
@@ -374,9 +380,6 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
 
             .show-products .box-container {
                 grid-template-columns: 1fr;
-            }
-            .menu-toggle{
-            display:block;
             }
         }
     </style>
@@ -423,7 +426,7 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
                             <option value="wedding">Wedding</option>
                             <option value="bouquet">Bouquet</option>
                             <option value="condolence">Condolence</option>
-                            <option value="backet">Basket</option>
+                            <option value="basket">Basket</option>
                             <option value="other">Other</option>
                         </select>
                     </div>
@@ -509,7 +512,7 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
                     <option value="wedding">Wedding</option>
                     <option value="bouquet">Bouquet</option>
                     <option value="condolence">Condolence</option>
-                    <option value="backet">Basket</option>
+                    <option value="basket">Basket</option>
                     <option value="other">Other</option>
                 </select>
             </div>
@@ -518,7 +521,7 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
                 <input type="file" name="update_p_image" accept="image/jpeg,image/png,image/gif">
             </div>
             <button type="submit" name="update_product" class="btn">Update</button>
-            <button type="button" class="btn" style="background: #e57373;" onclick="closeModal()">Cancel</button>
+            <button type="button" class="btn delete" onclick="closeModal()">Cancel</button>
         </form>
     </section>
     <script>
@@ -554,3 +557,6 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
     </script>
 </body>
 </html>
+<?php
+ob_end_flush(); // Flush the output buffer
+?>
