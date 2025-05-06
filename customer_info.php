@@ -1,4 +1,5 @@
 <?php
+ob_start();
 include 'connection.php';
 session_start();
 
@@ -6,12 +7,12 @@ session_start();
 $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
 $user_name = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : 'Guest';
 if (!$user_id) {
-    header('Location: login.php?redirect=customer_header');
+    header('Location: login.php?redirect=customer_info.php');
     exit();
 }
 
 // Session timeout
-$timeout_duration = 1800; // 30 minutes
+$timeout_duration = 1800;
 if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY']) > $timeout_duration) {
     session_unset();
     session_destroy();
@@ -43,7 +44,6 @@ $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
 while ($row = $result->fetch_assoc()) {
-    // Fetch status change history for each order
     $stmt_status = $conn->prepare("SELECT old_status, new_status, changed_at FROM order_status_log WHERE order_id = ? ORDER BY changed_at");
     $stmt_status->bind_param("i", $row['id']);
     $stmt_status->execute();
@@ -60,11 +60,10 @@ $cart_count = $stmt->get_result()->fetch_assoc()['count'];
 
 // Handle profile update
 $message = [];
-if (isset($_POST['update_profile'])) {
+if (isset($_POST['update_profile']) && isset($_POST['csrf_token']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
     $name = mysqli_real_escape_string($conn, filter_var($_POST['name'], FILTER_SANITIZE_STRING));
     $email = mysqli_real_escape_string($conn, filter_var($_POST['email'], FILTER_SANITIZE_EMAIL));
 
-    // Validate email
     $stmt = $conn->prepare("SELECT id FROM users WHERE email = ? AND id != ?");
     $stmt->bind_param("si", $email, $user_id);
     $stmt->execute();
@@ -83,6 +82,16 @@ if (isset($_POST['update_profile'])) {
         }
     }
 }
+
+// Handle logout
+if (isset($_POST['logout'])) {
+    $stmt = $conn->prepare("UPDATE users SET status = 'Offline' WHERE id = ?");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    session_destroy();
+    header("Location: index.php");
+    exit();
+}
 ?>
 
 <!DOCTYPE html>
@@ -91,103 +100,44 @@ if (isset($_POST['update_profile'])) {
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>My Account - Flower Shop</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="style1.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <script src="https://cdn.tailwindcss.com"></script>
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"/>
 </head>
 <body>
-    <header class="header bg-green-50 shadow-md sticky top-0 z-50">
-        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
-            <div class="flex items-center space-x-6">
-                <a href="/" class="text-2xl font-bold text-green-600">Flower Shop</a>
-                <div class="contact-info">
-                    <div class="flex items-center gap-1">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        <span>7:30 - 21:30</span>
-                    </div>
-                    <div class="flex items-center gap-1">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h2l1 7h12l1-7h2m-2 0a2 2 0 110 4 2 2 0 010-4zm-10 0a2 2 0 110 4 2 2 0 010-4zm-2 7h14l2 5H5l2-5z"></path>
-                        </svg>
-                        <span>0976491322</span>
-                    </div>
-                </div>
-            </div>
-            <div class="search-bar">
-                <div class="relative">
-                    <input type="text" placeholder="Search flowers..." class="w-full pl-10 pr-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:border-green-500 text-gray-700">
-                    <svg class="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                </div>
-            </div>
-            <nav class="nav-links flex space-x-6 items-center">
-                <div class="relative dropdown">
-                    <a href="/products" class="text-gray-700 hover:text-green-500">Products</a>
-                    <div class="dropdown-menu hidden absolute bg-white shadow-lg rounded-md mt-2 w-48">
-                        <a href="/products/birthday" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Birthday Flowers</a>
-                        <a href="/products/wedding" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Wedding Flowers</a>
-                        <a href="/products/bouquet" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Bouquets</a>
-                        <a href="/products/basket" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Baskets</a>
-                    </div>
-                </div>
-                <div class="relative dropdown">
-                    <a href="#" class="text-gray-700 hover:text-green-500 flex items-center">
-                        <svg class="w-6 h-6 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                        </svg>
-                        <span><?php echo htmlspecialchars($user_name); ?></span>
-                    </a>
-                    <div class="dropdown-menu hidden absolute bg-white shadow-lg rounded-md mt-2 w-48 right-0">
-                        <a href="customer_header.php" class="block px-4 py-2 text-gray-700 hover:bg-green-100">My Account</a>
-                        <a href="logout.php" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Logout</a>
-                    </div>
-                </div>
-                <a href="/cart" class="text-gray-700 hover:text-green-500 relative">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
-                    </svg>
-                    <span class="absolute -top-2 -right-2 bg-green-500 text-white text-xs rounded-full px-2"><?php echo $cart_count; ?></span>
-                </a>
-                <button id="menu-toggle" class="md:hidden text-gray-700">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
-                    </svg>
-                </button>
-            </nav>
-        </div>
-    </header>
+    <?php include 'customer_header.php'; ?>
 
     <main class="py-12 bg-gray-100">
         <div class="container mx-auto px-4">
-            <h2 class="text-2xl font-bold text-white text-center bg-green-800 py-4 mb-8 rounded">My Account</h2>
+            <h2 class="text-2xl font-bold text-white text-center bg-green-800 py-4 mb-8 rounded font-playfair">My Account</h2>
 
+            <!-- Messages -->
             <?php if (!empty($message)): ?>
                 <?php foreach ($message as $msg): ?>
-                    <div class="message text-center text-yellow-500 mb-4"><?php echo htmlspecialchars($msg); ?></div>
+                    <div class="message bg-[#f8d7da] text-[#721c24] p-4 rounded mb-4 text-center"><?php echo htmlspecialchars($msg); ?></div>
                 <?php endforeach; ?>
             <?php endif; ?>
 
             <!-- Profile Information -->
             <section class="mb-12">
-                <h3 class="text-xl font-bold text-gray-700 mb-4">Profile Information</h3>
+                <h3 class="text-xl font-bold text-gray-700 mb-4 font-playfair">Profile Information</h3>
                 <form action="" method="POST" class="bg-white p-6 rounded-lg shadow-md">
-                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label for="name" class="block text-gray-700 font-bold mb-2">Name</label>
-                            <input type="text" name="name" id="name" value="<?php echo htmlspecialchars($user['name']); ?>" class="w-full p-2 border rounded focus:outline-none focus:border-green-500" required>
-                        </div>
-                        <div>
-                            <label for="email" class="block text-gray-700 font-bold mb-2">Email</label>
-                            <input type="email" name="email" id="email" value="<?php echo htmlspecialchars($user['email']); ?>" class="w-full p-2 border rounded focus:outline-none focus:border-green-500" required>
-                        </div>
-                    </div>
-                    <button type="submit" name="update_profile" class="mt-4 bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Update Profile</button>
-                </form>
+    <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token'] ?? ''); ?>">
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <div>
+            <label for="name" class="block text-gray-700 font-bold mb-2">Name</label>
+            <input type="text" name="name" id="name" value="<?php echo htmlspecialchars($user['name']); ?>" class="w-full p-2 border rounded focus:outline-none focus:border-green-500" required>
+        </div>
+        <div>
+            <label for="email" class="block text-gray-700 font-bold mb-2">Email</label>
+            <input type="email" name="email" id="email" value="<?php echo htmlspecialchars($user['email']); ?>" class="w-full p-2 border rounded focus:outline-none focus:border-green-500" required>
+        </div>
+    </div>
+    <button type="submit" name="update_profile" class="mt-4 bg-[#b89b72] text-white px-4 py-2 rounded hover:bg-[#a68a64] transition">Update Profile</button>
+</form>
                 <div class="bg-white p-6 rounded-lg shadow-md mt-4">
-                    <h4 class="text-lg font-bold text-gray-700 mb-2">Contact Details</h4>
+                    <h4 class="text-lg font-bold text-gray-700 mb-2 font-playfair">Contact Details</h4>
                     <p class="text-gray-600">Phone Number: <?php echo htmlspecialchars($contact_details['number']); ?></p>
                     <p class="text-gray-600">Address: <?php echo htmlspecialchars($contact_details['address']); ?></p>
                     <p class="text-sm text-gray-500 mt-2">*Contact details are sourced from your most recent order. Update them during checkout.</p>
@@ -196,16 +146,16 @@ if (isset($_POST['update_profile'])) {
 
             <!-- Order History -->
             <section>
-                <h3 class="text-xl font-bold text-gray-700 mb-4">Order History</h3>
+                <h3 class="text-xl font-bold text-gray-700 mb-4 font-playfair">Order History</h3>
                 <?php if (empty($orders)): ?>
-                    <p class="text-gray-600">You have no orders yet. <a href="/products" class="text-green-500 hover:underline">Start shopping!</a></p>
+                    <p class="text-gray-600">You have no orders yet. <a href="index_product.php" class="text-green-500 hover:underline">Start shopping!</a></p>
                 <?php else: ?>
                     <div class="grid grid-cols-1 gap-6">
                         <?php foreach ($orders as $order): ?>
                             <div class="bg-white p-4 rounded-lg shadow-md">
                                 <h4 class="text-lg font-bold text-gray-700">Order #<?php echo $order['id']; ?></h4>
                                 <p class="text-gray-600">Placed on: <?php echo htmlspecialchars($order['placed_on']); ?></p>
-                                <p class="text-gray-600">Total: <?php echo number_format($order['total_price'], 2, ',', '.'); ?>đ</p>
+                                <p class="text-gray-600">Total: <?php echo number_format($order['total_price'], 2, ',', '.') . 'đ'; ?></p>
                                 <p class="text-gray-600">Status: <?php echo htmlspecialchars($order['payment_status']); ?></p>
                                 <p class="text-gray-600">Products: <?php echo htmlspecialchars($order['total_products']); ?></p>
                                 <?php if (!empty($order['status_history'])): ?>
@@ -227,22 +177,22 @@ if (isset($_POST['update_profile'])) {
     <footer class="bg-green-800 text-white py-8">
         <div class="container mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
-                <h3 class="text-lg font-bold mb-4">Contact Us</h3>
+                <h3 class="text-lg font-bold mb-4 font-playfair">Contact Us</h3>
                 <p class="mb-2">Flower Shop</p>
                 <p class="mb-2">123 Flower Street, City, Country</p>
                 <p class="mb-2">Phone: +123 456 7890</p>
                 <p>Email: support@flowershop.com</p>
             </div>
             <div>
-                <h3 class="text-lg font-bold mb-4">Quick Links</h3>
+                <h3 class="text-lg font-bold mb-4 font-playfair">Quick Links</h3>
                 <ul class="space-y-2">
-                    <li><a href="/products" class="hover:text-green-300">Products</a></li>
-                    <li><a href="/about" class="hover:text-green-300">About</a></li>
+                    <li><a href="index_product.php" class="hover:text-green-300">Products</a></li>
+                    <li><a href="index_about.php" class="hover:text-green-300">About</a></li>
                     <li><a href="logout.php" class="hover:text-green-300">Logout</a></li>
                 </ul>
             </div>
             <div>
-                <h3 class="text-lg font-bold mb-4">Follow Us</h3>
+                <h3 class="text-lg font-bold mb-4 font-playfair">Follow Us</h3>
                 <div class="flex space-x-4">
                     <a href="https://facebook.com" class="hover:text-green-300">
                         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -267,11 +217,35 @@ if (isset($_POST['update_profile'])) {
         </div>
     </footer>
 
-    <script src="script.js"></script>
+    <!-- Inline JavaScript -->
     <script>
+        // Auto-remove messages after 3 seconds
         setTimeout(() => {
             document.querySelectorAll('.message').forEach(msg => msg.remove());
         }, 3000);
+
+        // Mobile Menu Toggle
+        const menuToggle = document.getElementById('menu-toggle');
+        const navbar = document.getElementById('navbar');
+        menuToggle.addEventListener('click', () => {
+            navbar.classList.toggle('active');
+        });
+
+        // User Dropdown Toggle
+        const userBtn = document.getElementById('user-btn');
+        const userBox = document.getElementById('user-box');
+        userBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            userBox.classList.toggle('active');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!userBtn.contains(e.target) && !userBox.contains(e.target)) {
+                userBox.classList.remove('active');
+            }
+        });
     </script>
 </body>
 </html>
+<?php ob_end_flush(); ?>
