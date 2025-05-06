@@ -1,19 +1,41 @@
 <?php
 include 'connection.php';
 session_start();
-// Session timeout
-$timeout_duration = 600; 
+$timeout_duration = 600; // 10 minutes
 if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY']) > $timeout_duration) {
+    error_log("Session timeout detected for session: " . session_id());
+    $admin_id = filter_var($_SESSION['admin_id'] ?? null, FILTER_VALIDATE_INT);
+    if ($admin_id) {
+        try {
+            $stmt = $conn->prepare("UPDATE users SET status = 'Offline', updated_at = NOW() WHERE id = ?");
+            $stmt->bind_param("i", $admin_id);
+            $stmt->execute();
+            error_log("Admin ID $admin_id status set to Offline due to timeout");
+        } catch (Exception $e) {
+            error_log("Error setting admin offline (ID: $admin_id) during timeout: " . $e->getMessage());
+        }
+    } else {
+        error_log("No admin_id found in session during timeout");
+    }
     session_unset();
     session_destroy();
     header('Location: login.php?timeout=true');
     exit();
 }
-$_SESSION['LAST_ACTIVITY'] = time();
 
-// Check admin session
+// Update LAST_ACTIVITY and set status to Online
 $admin_id = filter_var($_SESSION['admin_id'] ?? null, FILTER_VALIDATE_INT);
-if (!$admin_id) {
+if ($admin_id) {
+    try {
+        $stmt = $conn->prepare("UPDATE users SET status = 'Online', updated_at = NOW() WHERE id = ?");
+        $stmt->bind_param("i", $admin_id);
+        $stmt->execute();
+        error_log("Admin ID $admin_id status set to Online");
+    } catch (Exception $e) {
+        error_log("Error setting admin online (ID: $admin_id): " . $e->getMessage());
+    }
+    $_SESSION['LAST_ACTIVITY'] = time();
+} else {
     $_SESSION['message'] = 'Please log in as an admin to access this page.';
     header('Location: login.php');
     exit();
