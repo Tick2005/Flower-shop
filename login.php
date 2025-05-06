@@ -7,6 +7,24 @@ error_reporting(E_ALL);
 include 'connection.php';
 session_start();
 
+// Function to set user status to Offline
+function setUserOffline($conn, $user_id) {
+    if (!$user_id || !is_numeric($user_id)) {
+        error_log("Invalid user_id in setUserOffline: " . var_export($user_id, true));
+        return false;
+    }
+    try {
+        $stmt = $conn->prepare("UPDATE users SET status = 'Offline', updated_at = NOW() WHERE id = ?");
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+        error_log("User ID $user_id status set to Offline");
+        return true;
+    } catch (mysqli_sql_exception $e) {
+        error_log("Error setting user offline (ID: $user_id): " . $e->getMessage());
+        return false;
+    }
+}
+
 function validate_password($password) {
     if (strlen($password) < 8 || strlen($password) > 30) {
         return "Password must be between 8 and 30 characters!";
@@ -26,6 +44,14 @@ function validate_password($password) {
 // Session timeout
 $timeout_duration = 600; // 10 minutes
 if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY']) > $timeout_duration) {
+    error_log("Session timeout detected for session: " . session_id());
+    // Set user status to Offline before destroying session
+    $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : (isset($_SESSION['admin_id']) ? $_SESSION['admin_id'] : null);
+    if ($user_id) {
+        setUserOffline($conn, $user_id);
+    } else {
+        error_log("No user_id or admin_id found in session during timeout");
+    }
     session_unset();
     session_destroy();
     header('Location: login.php?timeout=true');
@@ -60,9 +86,10 @@ if (isset($_POST['submit-btn'])) {
                     if (password_verify($password, $row['password'])) {
                         session_regenerate_id(true);
                         // Update user status to Online
-                        $stmt = $conn->prepare("UPDATE users SET status = 'Online' WHERE id = ?");
+                        $stmt = $conn->prepare("UPDATE users SET status = 'Online', updated_at = NOW() WHERE id = ?");
                         $stmt->bind_param("i", $row['id']);
                         $stmt->execute();
+                        error_log("User ID {$row['id']} status set to Online");
 
                         // Set session variables based on user type
                         if ($row['user_type'] === 'admin') {
@@ -264,6 +291,9 @@ ob_end_flush();
                     foreach ($message as $msg) {
                         echo '<div class="message">' . htmlspecialchars($msg) . '</div>';
                     }
+                }
+                if (isset($_GET['timeout']) && $_GET['timeout'] === 'true') {
+                    echo '<div class="message">Session timed out. Please log in again.</div>';
                 }
             ?>
             <button type="submit" name="submit-btn">Login</button>
