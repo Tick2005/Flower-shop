@@ -1,160 +1,91 @@
+<?php
+ob_start();
+include 'connection.php';
+
+// Check if user is logged in
+$user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
+$user_name = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : 'Guest';
+if (!$user_id) {
+    header('Location: login.php');
+    exit();
+}
+?>
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Flower Shop</title>
-  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-  <style>
-    header {
-      background-color: #436B46;
-      width: 100%;
-      padding: 2rem 0;
-      box-shadow: 0 5px 15px rgba(0, 0, 0, 0.1);
-      position: sticky;
-      top: 0;
-      z-index: 1000;
-    }
-    .flex {
-      max-width: 1200px;
-      margin: 0 auto;
-      display: flex;
-      justify-content: space-around;
-      align-items: center;
-    }
-    .logo {
-      font-size: 2rem;
-      font-weight: bold;
-      color: #aa4ff3;
-      text-decoration: none;
-    }
-    .logo span {
-      color: #e382c5;
-    }
-    .navbar a {
-      margin: 0 1rem;
-      font-size: 1rem;
-      color: #fff;
-      text-transform: uppercase;
-      text-decoration: none;
-    }
-    .navbar a:hover,
-    .icons i:hover {
-      color: #c7b3f5;
-    }
-    .icons {
-      display: flex;
-      align-items: center;
-    }
-    .icons i {
-      margin-left: 1.2rem;
-      font-size: 1.5rem;
-      cursor: pointer;
-      color: #fff;
-    }
-    .icons i:last-child {
-      font-size: 1rem;
-    }
-    #menu-btn {
-      display: none;
-    }
-    .user-box {
-      position: absolute;
-      top: 120%;
-      right: 10%;
-      width: 18rem;
-      background: #fff;
-      box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
-      border-radius: 5px;
-      padding: 1rem;
-      display: none;
-    }
-    .user-box.active {
-      display: block;
-    }
-    .user-box p {
-      font-size: 14px;
-      color: #555;
-      margin: 0.5rem 0;
-    }
-    .user-box span {
-      color: #aa4ff3;
-    }
-    .logout-btn {
-      background: #f4e9ff;
-      width: 100%;
-      height: 40px;
-      border: none;
-      border-radius: 5px;
-      color: #aa4ff3;
-      font-weight: bold;
-      cursor: pointer;
-      margin-top: 1rem;
-    }
-
-    @media(max-width: 991px) {
-      #menu-btn {
-        display: block;
-      }
-      .navbar {
-        position: absolute;
-        top: 100%;
-        left: 0;
-        right: 0;
-        background:rgb(208, 245, 211);
-        display: none;
-        flex-direction: row;
-        border-top: 2px solid #aa4ff3;
-        padding: 1rem 0;
-        width: 100%;
-        height: auto;
-        box-sizing: border-box;
-        transition: 0.3s ease;
-      }
-      .navbar.active {
-        display: flex;
-      }
-      .navbar a {
-        margin: 1rem;
-        color: #000000;
-        font-weight:bold;
-        text-align: center;
-      }
-      .icons i {
-        display: none;
-      }
-      .icons .fa-regular.fa-user, .icons .fa-solid.fa-cart-shopping {
-        display: inline-block;
-      }
-    }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Flower Shop</title>
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="style1.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <script src="https://cdn.tailwindcss.com"></script>
 </head>
 <body>
-  <header class="header">
-    <div class="flex">
-      <a href="index.php" class="logo">Flower <span>Shop</span></a>
-      <nav class="navbar" id="navbar">
-        <a href="index.php">Home</a>
-        <a href="index_about.php">About</a>
-        <a href="index_product.php">Products</a>
-        <a href="index_contacts.php">Contacts</a>
-      </nav>
-      <div class="icons">
-        <i class="fa-solid fa-cart-shopping"></i>
-        <i class="fa-regular fa-user" id="user-btn"></i>
-        <i><?php echo $_SESSION['user_name']; ?></i>
-        <i class="fas fa-bars" id="menu-btn"></i>
-      </div>
-      <div class="user-box" id="user-box">
-        <p>Username: <span><?php echo $_SESSION['user_name']; ?></span></p>
-        <p>Email: <span><?php echo $_SESSION['user_email']; ?></span></p>
-        <form method="post">
-          <button name="logout" class="logout-btn">Log Out</button>
-        </form>
-      </div>
-    </div>
-  </header>
+    <header class="header bg-green-50 shadow-md sticky top-0 z-50">
+        <div class="container mx-auto px-4 py-4 flex justify-between items-center">
+            <!-- Logo -->
+            <a href="customer.php" class="text-2xl font-bold text-green-600 font-playfair">Flower <span class="text-[#b89b72]">Shop</span></a>
 
-  <script src="script.js"> </script>
+            <!-- Navigation -->
+            <nav class="nav-links flex space-x-6 items-center" id="navbar">
+                <a href="customer.php" class="text-gray-700 hover:text-green-500">Home</a>
+                <a href="index_about.php" class="text-gray-700 hover:text-green-500">About</a>
+                <a href="index_product.php" class="text-gray-700 hover:text-green-500">Products</a>
+                <a href="index_contacts.php" class="text-gray-700 hover:text-green-500">Contacts</a>
+            </nav>
+
+            <!-- Icons and User Info -->
+            <div class="icons flex items-center space-x-4">
+                <a href="cart.php" class="text-gray-700 hover:text-green-500 relative">
+                    <i class="fa-solid fa-cart-shopping text-xl"></i>
+                    <span class="absolute -top-2 -right-2 bg-green-500 text-white text-xs rounded-full px-2">0</span>
+                </a>
+                <div class="relative dropdown">
+                    <a href="#" class="text-gray-700 hover:text-green-500 flex items-center" id="user-btn">
+                        <i class="fa-regular fa-user text-xl mr-1"></i>
+                        <span><?php echo htmlspecialchars($user_name); ?></span>
+                    </a>
+                    <div class="dropdown-menu hidden absolute bg-white shadow-lg rounded-md mt-2 w-48 right-0 z-50" id="user-box">
+                        <p class="px-4 py-2 text-gray-700">Username: <span class="text-[#b89b72]"><?php echo htmlspecialchars($user_name); ?></span></p>
+                        <p class="px-4 py-2 text-gray-700">Email: <span class="text-[#b89b72]"><?php echo htmlspecialchars($_SESSION['user_email'] ?? 'N/A'); ?></span></p>
+                        <form method="post" action="">
+                            <button type="submit" name="logout" class="w-full text-left px-4 py-2 text-gray-700 hover:bg-green-100">Logout</button>
+                        </form>
+                    </div>
+                </div>
+                <button id="menu-toggle" class="md:hidden text-gray-700">
+                    <i class="fas fa-bars text-xl"></i>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Inline JavaScript -->
+    <script>
+        // Mobile Menu Toggle
+        const menuToggle = document.getElementById('menu-toggle');
+        const navbar = document.getElementById('navbar');
+        menuToggle.addEventListener('click', () => {
+            navbar.classList.toggle('active');
+        });
+
+        // User Dropdown Toggle
+        const userBtn = document.getElementById('user-btn');
+        const userBox = document.getElementById('user-box');
+        userBtn.addEventListener('click', (e) => {
+            e.preventDefault();
+            userBox.classList.toggle('active');
+        });
+
+        // Close dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            if (!userBtn.contains(e.target) && !userBox.contains(e.target)) {
+                userBox.classList.remove('active');
+            }
+        });
+    </script>
 </body>
 </html>
+<?php ob_end_flush(); ?>
