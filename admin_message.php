@@ -1,8 +1,9 @@
 <?php
-ob_start(); // Start output buffering
+ob_start();
 session_start();
 include 'connection.php';
 
+// Session timeout configuration
 $timeout_duration = 600; // 10 minutes
 if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY']) > $timeout_duration) {
     error_log("Session timeout detected for session: " . session_id());
@@ -16,8 +17,6 @@ if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY']) >
         } catch (Exception $e) {
             error_log("Error setting admin offline (ID: $admin_id) during timeout: " . $e->getMessage());
         }
-    } else {
-        error_log("No admin_id found in session during timeout");
     }
     session_unset();
     session_destroy();
@@ -25,48 +24,98 @@ if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY']) >
     exit();
 }
 
-// Update LAST_ACTIVITY and set status to Online
+// Validate admin access
 $admin_id = filter_var($_SESSION['admin_id'] ?? null, FILTER_VALIDATE_INT);
-if ($admin_id) {
-    try {
-        $stmt = $conn->prepare("UPDATE users SET status = 'Online', updated_at = NOW() WHERE id = ?");
-        $stmt->bind_param("i", $admin_id);
-        $stmt->execute();
-        error_log("Admin ID $admin_id status set to Online");
-    } catch (Exception $e) {
-        error_log("Error setting admin online (ID: $admin_id): " . $e->getMessage());
-    }
-    $_SESSION['LAST_ACTIVITY'] = time();
-} else {
+if (!$admin_id) {
     $_SESSION['message'] = 'Please log in as an admin to access this page.';
     header('Location: login.php');
     exit();
 }
 
+// Verify admin role
+$stmt = $conn->prepare("SELECT user_type FROM users WHERE id = ?");
+$stmt->bind_param("i", $admin_id);
+$stmt->execute();
+$result = $stmt->get_result();
+$user = $result->fetch_assoc();
+$stmt->close();
+
+if ($user['user_type'] !== 'admin') {
+    $_SESSION['message'] = 'Access denied. Admin privileges required.';
+    header('Location: login.php');
+    exit();
+}
+
+// Update user status to Online
+try {
+    $stmt = $conn->prepare("UPDATE users SET status = 'Online', updated_at = NOW() WHERE id = ?");
+    $stmt->bind_param("i", $admin_id);
+    $stmt->execute();
+    error_log("Admin ID $admin_id status set to Online");
+} catch (Exception $e) {
+    error_log("Error setting admin online (ID: $admin_id): " . $e->getMessage());
+}
+$_SESSION['LAST_ACTIVITY'] = time();
 
 // Initialize message array
 $message = $_SESSION['message'] ?? [];
 unset($_SESSION['message']);
 
-// Generate CSRF token if not set
+// Generate CSRF token
 if (!isset($_SESSION['csrf_token'])) {
     $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
 }
 
-// Handle delete message
+// Pagination and search
+$per_page = 10;
+$page = isset($_GET['page']) ? max(1, filter_var($_GET['page'], FILTER_VALIDATE_INT)) : 1;
+$offset = ($page - 1) * $per_page;
+$search = isset($_GET['search']) ? trim(filter_var($_GET['search'], FILTER_SANITIZE_STRING)) : '';
+
+// Handle delete review
 if (isset($_GET['delete']) && isset($_GET['csrf_token']) && $_GET['csrf_token'] === $_SESSION['csrf_token']) {
     $delete_id = filter_var($_GET['delete'], FILTER_VALIDATE_INT);
     if ($delete_id) {
-        $stmt = $conn->prepare("DELETE FROM message WHERE id = ?");
-        $stmt->bind_param("i", $delete_id);
-        if ($stmt->execute()) {
-            $message[] = 'Message deleted successfully.';
-        } else {
-            $message[] = 'Failed to delete message.';
+        try {
+            $stmt = $conn->prepare("DELETE FROM reviews WHERE id = ?");
+            $stmt->bind_param("i", $delete_id);
+            if ($stmt->execute()) {
+                $message[] = 'Review deleted successfully.';
+            } else {
+                $message[] = 'Failed to delete review.';
+            }
+        } catch (Exception $e) {
+            $message[] = 'Error deleting review: ' . htmlspecialchars($e->getMessage());
+            error_log("Error deleting review ID $delete_id: " . $e->getMessage());
         }
         $stmt->close();
     }
-    header('Location: admin_message.php');
+    header('Location: admin_reviews.php?page=' . $page . ($search ? '&search=' . urlencode($search) : ''));
+    exit();
+}
+
+// Handle reply submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_id'], $_POST['reply'], $_POST['csrf_token']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
+    $review_id = filter_var($_POST['review_id'], FILTER_VALIDATE_INT);
+    $reply = trim(filter_var($_POST['reply'], FILTER_SANITIZE_STRING));
+    if ($review_id && $reply) {
+        try {
+            $stmt = $conn->prepare("INSERT INTO review_replies (review_id, admin_id, reply, created_at) VALUES (?, ?, ?, NOW())");
+            $stmt->bind_param("iis", $review_id, $admin_id, $reply);
+            if ($stmt->execute()) {
+                $message[] = 'Reply posted successfully.';
+            } else {
+                $message[] = 'Failed to post reply.';
+            }
+        } catch (Exception $e) {
+            $message[] = 'Error posting reply: ' . htmlspecialchars($e->getMessage());
+            error_log("Error posting reply for review ID $review_id: " . $e->getMessage());
+        }
+        $stmt->close();
+    } else {
+        $message[] = 'Invalid review ID or empty reply.';
+    }
+    header('Location: admin_reviews.php?page=' . $page . ($search ? '&search=' . urlencode($search) : ''));
     exit();
 }
 ?>
@@ -76,7 +125,7 @@ if (isset($_GET['delete']) && isset($_GET['csrf_token']) && $_GET['csrf_token'] 
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Messages - Flower Shop</title>
+    <title>Admin Reviews - Flower Shop</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
     <style>
@@ -103,12 +152,38 @@ if (isset($_GET['delete']) && isset($_GET['csrf_token']) && $_GET['csrf_token'] 
             margin-left: 250px;
         }
 
-        .messages h1 {
+        .reviews h1 {
             font-family: 'Playfair Display', serif;
             font-size: 2.5rem;
             color: #4a3c31;
             margin-bottom: 30px;
             text-align: center;
+        }
+
+        .search-bar {
+            margin-bottom: 20px;
+            display: flex;
+            gap: 10px;
+        }
+
+        .search-bar input {
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            flex: 1;
+        }
+
+        .search-bar button {
+            background: #e57373;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+        }
+
+        .search-bar button:hover {
+            background: #d32f2f;
         }
 
         .box-container {
@@ -152,11 +227,37 @@ if (isset($_GET['delete']) && isset($_GET['csrf_token']) && $_GET['csrf_token'] 
             transition: background 0.3s, transform 0.2s;
             text-decoration: none;
             display: inline-block;
+            margin-right: 10px;
         }
 
         .btn:hover {
             background: #d32f2f;
             transform: translateY(-2px);
+        }
+
+        .reply-form {
+            margin-top: 15px;
+        }
+
+        .reply-form textarea {
+            width: 100%;
+            padding: 10px;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            resize: vertical;
+            margin-bottom: 10px;
+        }
+
+        .replies {
+            margin-top: 15px;
+            padding: 10px;
+            background: #f9f9f9;
+            border-radius: 5px;
+        }
+
+        .replies p {
+            font-size: 0.85rem;
+            color: #4a3c31;
         }
 
         .message {
@@ -170,6 +271,29 @@ if (isset($_GET['delete']) && isset($_GET['csrf_token']) && $_GET['csrf_token'] 
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
             font-weight: 500;
             z-index: 1000;
+        }
+
+        .pagination {
+            margin-top: 20px;
+            text-align: center;
+        }
+
+        .pagination a {
+            display: inline-block;
+            padding: 8px 16px;
+            margin: 0 4px;
+            background: #e57373;
+            color: white;
+            text-decoration: none;
+            border-radius: 5px;
+        }
+
+        .pagination a:hover {
+            background: #d32f2f;
+        }
+
+        .pagination a.active {
+            background: #b89b72;
         }
 
         @media (max-width: 768px) {
@@ -192,8 +316,14 @@ if (isset($_GET['delete']) && isset($_GET['csrf_token']) && $_GET['csrf_token'] 
     <?php include 'admin_header.php'; ?>
     <div class="container">
         <main class="main-content">
-            <section class="messages">
-                <h1>Message Management</h1>
+            <section class="reviews">
+                <h1>Review Management</h1>
+                <!-- Search bar -->
+                <form class="search-bar" method="GET">
+                    <input type="text" name="search" placeholder="Search by name, email, or product..." value="<?php echo htmlspecialchars($search); ?>">
+                    <button type="submit">Search</button>
+                </form>
+                <!-- Messages -->
                 <?php
                 if (!empty($message)) {
                     foreach ($message as $msg) {
@@ -203,35 +333,125 @@ if (isset($_GET['delete']) && isset($_GET['csrf_token']) && $_GET['csrf_token'] 
                 ?>
                 <div class="box-container">
                     <?php
-                    $stmt = $conn->prepare("SELECT * FROM message");
+                    // Prepare SQL query with search and pagination
+                    $sql = "SELECT r.*, p.name AS product_name 
+                            FROM reviews r 
+                            LEFT JOIN products p ON r.product_id = p.id 
+                            WHERE 1=1";
+                    $params = [];
+                    $types = '';
+                    
+                    if ($search) {
+                        $sql .= " AND (r.name LIKE ? OR r.email LIKE ? OR p.name LIKE ?)";
+                        $search_param = "%$search%";
+                        $params = [$search_param, $search_param, $search_param];
+                        $types = 'sss';
+                    }
+                    
+                    $sql .= " ORDER BY r.created_at DESC LIMIT ? OFFSET ?";
+                    $params[] = $per_page;
+                    $params[] = $offset;
+                    $types .= 'ii';
+
+                    $stmt = $conn->prepare($sql);
+                    if ($params) {
+                        $stmt->bind_param($types, ...$params);
+                    }
                     $stmt->execute();
                     $result = $stmt->get_result();
+
                     if ($result->num_rows > 0) {
-                        while ($msg = $result->fetch_assoc()) {
+                        while ($review = $result->fetch_assoc()) {
                     ?>
                     <div class="box">
-                        <p>Message ID: <span><?php echo htmlspecialchars($msg['id']); ?></span></p>
-                        <p>User ID: <span><?php echo htmlspecialchars($msg['user_id']); ?></span></p>
-                        <p>Name: <span><?php echo htmlspecialchars($msg['name']); ?></span></p>
-                        <p>Email: <span><?php echo htmlspecialchars($msg['email']); ?></span></p>
-                        <p>Phone: <span><?php echo htmlspecialchars($msg['number']); ?></span></p>
-                        <p>Message: <span><?php echo htmlspecialchars($msg['message']); ?></span></p>
-                        <a href="admin_message.php?delete=<?php echo htmlspecialchars($msg['id']); ?>&csrf_token=<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>" 
-                           class="btn" 
-                           onclick="return confirm('Delete this message?')">Delete</a>
+                        <p>Review ID: <span><?php echo htmlspecialchars($review['id']); ?></span></p>
+                        <p>User ID: <span><?php echo htmlspecialchars($review['user_id']); ?></span></p>
+                        <p>Product: <span><?php echo htmlspecialchars($review['product_name'] ?: 'N/A'); ?></span></p>
+                        <p>Name: <span><?php echo htmlspecialchars($review['name']); ?></span></p>
+                        <p>Email: <span><?php echo htmlspecialchars($review['email']); ?></span></p>
+                        <p>Phone: <span><?php echo htmlspecialchars($review['number']); ?></span></p>
+                        <p>Rating: <span><?php echo htmlspecialchars($review['rating'] ?: 'N/A'); ?> / 5</span></p>
+                        <p>Review: <span><?php echo htmlspecialchars($review['message']); ?></span></p>
+                        <p>Created: <span><?php echo htmlspecialchars($review['created_at']); ?></span></p>
+                        <!-- Display existing replies -->
+                        <div class="replies">
+                            <?php
+                            $reply_stmt = $conn->prepare("SELECT rr.*, u.name AS admin_name 
+                                                        FROM review_replies rr 
+                                                        JOIN users u ON rr.admin_id = u.id 
+                                                        WHERE rr.review_id = ? 
+                                                        ORDER BY rr.created_at");
+                            $reply_stmt->bind_param("i", $review['id']);
+                            $reply_stmt->execute();
+                            $replies = $reply_stmt->get_result();
+                            if ($replies->num_rows > 0) {
+                                while ($reply = $replies->fetch_assoc()) {
+                                    echo '<p><strong>' . htmlspecialchars($reply['admin_name']) . ' (' . htmlspecialchars($reply['created_at']) . '):</strong> ' . htmlspecialchars($reply['reply']) . '</p>';
+                                }
+                            } else {
+                                echo '<p>No replies yet.</p>';
+                            }
+                            $reply_stmt->close();
+                            ?>
+                        </div>
+                        <!-- Reply form -->
+                        <form class="reply-form" method="POST">
+                            <textarea name="reply" placeholder="Write your reply..." required></textarea>
+                            <input type="hidden" name="review_id" value="<?php echo htmlspecialchars($review['id']); ?>">
+                            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
+                            <button type="submit" class="btn">Post Reply</button>
+                            <a href="admin_reviews.php?delete=<?php echo htmlspecialchars($review['id']); ?>&csrf_token=<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>&page=<?php echo $page; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?>" 
+                               class="btn" 
+                               onclick="return confirm('Delete this review?')">Delete</a>
+                        </form>
                     </div>
                     <?php
                         }
                     } else {
-                        echo '<p>No messages found.</p>';
+                        echo '<p>No reviews found.</p>';
                     }
                     $stmt->close();
                     ?>
                 </div>
+                <!-- Pagination -->
+                <?php
+                $count_sql = "SELECT COUNT(*) as total 
+                             FROM reviews r 
+                             LEFT JOIN products p ON r.product_id = p.id 
+                             WHERE 1=1";
+                $count_params = [];
+                $count_types = '';
+                
+                if ($search) {
+                    $count_sql .= " AND (r.name LIKE ? OR r.email LIKE ? OR p.name LIKE ?)";
+                    $count_params = ["%$search%", "%$search%", "%$search%"];
+                    $count_types = 'sss';
+                }
+
+                $count_stmt = $conn->prepare($count_sql);
+                if ($count_params) {
+                    $count_stmt->bind_param($count_types, ...$count_params);
+                }
+                $count_stmt->execute();
+                $total_reviews = $count_stmt->get_result()->fetch_assoc()['total'];
+                $count_stmt->close();
+                
+                $total_pages = ceil($total_reviews / $per_page);
+                
+                if ($total_pages > 1) {
+                    echo '<div class="pagination">';
+                    for ($i = 1; $i <= $total_pages; $i++) {
+                        $active = $i === $page ? ' active' : '';
+                        echo '<a href="admin_reviews.php?page=' . $i . ($search ? '&search=' . urlencode($search) : '') . '" class="' . $active . '">' . $i . '</a>';
+                    }
+                    echo '</div>';
+                }
+                ?>
             </section>
         </main>
     </div>
     <script>
+        // Auto-remove messages after 3 seconds
         setTimeout(() => {
             document.querySelectorAll('.message').forEach(msg => msg.remove());
         }, 3000);
@@ -239,5 +459,6 @@ if (isset($_GET['delete']) && isset($_GET['csrf_token']) && $_GET['csrf_token'] 
 </body>
 </html>
 <?php
-ob_end_flush(); // Flush the output buffer
+$conn->close();
+ob_end_flush();
 ?>
