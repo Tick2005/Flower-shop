@@ -177,7 +177,7 @@ if (isset($_POST['logout'])) {
     </header>
 
     <main>
-        <!-- Slider (unchanged) -->
+        <!-- Slider -->
         <div class="slider">
             <div class="slides">
                 <div class="slide" style="background-image: url('image/flower_slider1.jpg');">
@@ -206,7 +206,7 @@ if (isset($_POST['logout'])) {
             <button class="slider-btn next">❯</button>
         </div>
 
-        <!-- About Us Section (unchanged) -->
+        <!-- About Us Section -->
         <section class="about-section">
             <div class="container mx-auto px-4">
                 <h2 class="text-3xl font-bold mb-6">About Us</h2>
@@ -221,6 +221,7 @@ if (isset($_POST['logout'])) {
                 </p>
             </div>
         </section>
+
         <!-- Product Grid Section -->
         <section class="py-12 bg-gray-100">
             <div class="container mx-auto px-4">
@@ -228,18 +229,22 @@ if (isset($_POST['logout'])) {
                 <div class="grid grid-cols-2 md:grid-cols-5 gap-6">
                     <?php foreach ($products as $product): ?>
                         <div class="product-card">
-                            <div class="product-label">
-                                <?php
-                                $discount = ($product['price'] - $product['sale']) / $product['price'] * 100;
-                                echo $product['sale'] < $product['price'] ? '-' . round($discount) . '%' : 'NEW';
-                                ?>
-                            </div>
+                            <?php if ($product['sale'] > 0 && $product['sale'] < $product['price']): ?>
+                                <div class="product-label">
+                                    <?php
+                                    echo '-' . $product['sale']  . '%';
+                                    ?>
+                                </div>
+                            <?php endif; ?>
                             <img src="<?php echo htmlspecialchars($product['image']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="product-image">
                             <div class="product-info">
                                 <h3 class="product-name"><?php echo htmlspecialchars($product['name']); ?></h3>
                                 <div>
+                                <?php if ($product['sale'] > 0 && $product['sale'] < $product['price']): ?>
                                     <span class="product-price-old"><?php echo number_format($product['price'], 0, ',', '.') . 'đ'; ?></span>
-                                    <span class="product-price-new"><?php echo number_format($product['sale'], 0, ',', '.') . 'đ'; ?></span>
+                                 <?php endif; ?>
+                                    
+                                    <span class="product-price-new"><?php echo number_format( (100-$product["sale"])/100 *$product["price"], 3, ',', '.') . 'đ'; ?></span>
                                 </div>
                                 <!-- Add to Cart Form -->
                                 <form method="POST" action="" class="mt-2">
@@ -267,7 +272,7 @@ if (isset($_POST['logout'])) {
             </div>
         </section>
 
-        <!-- Flower Introductions Section (unchanged) -->
+        <!-- Flower Introductions Section -->
         <section class="py-12 bg-gray-100">
             <div class="container mx-auto px-4">
                 <h2 class="text-2xl font-bold text-white text-center bg-green-800 py-4 mb-8 rounded">Our Favorite Flowers</h2>
@@ -308,7 +313,7 @@ if (isset($_POST['logout'])) {
             </div>
         </section>
 
-        <!-- Service Section (unchanged) -->
+        <!-- Service Section -->
         <section class="service-section">
             <div class="container mx-auto px-4">
                 <h2 class="text-2xl font-bold">Shop Hoa Tươi Online Phúc Vũ:</h2>
