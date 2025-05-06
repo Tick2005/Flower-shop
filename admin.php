@@ -1,9 +1,8 @@
 <?php
 include 'connection.php';
 session_start();
-
 // Session timeout
-$timeout_duration = 1800; // 30 minutes
+$timeout_duration = 600; 
 if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY']) > $timeout_duration) {
     session_unset();
     session_destroy();
@@ -15,7 +14,7 @@ $_SESSION['LAST_ACTIVITY'] = time();
 // Check admin session
 $admin_id = filter_var($_SESSION['admin_id'] ?? null, FILTER_VALIDATE_INT);
 if (!$admin_id) {
-    $_SESSION['message'] = 'Please upregulated log in as an admin to access this page.';
+    $_SESSION['message'] = 'Please log in as an admin to access this page.';
     header('Location: login.php');
     exit();
 }
@@ -30,21 +29,21 @@ unset($_SESSION['message']);
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Admin Dashboard - Flower Shop</title>
+    <title>Admin Dashboard - Luxe Blossom</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Inter', sans-serif;
+            font-family: 'Roboto', sans-serif;
         }
 
         body {
-            background: #f5f5f5;
-            color: #333;
-            padding-top: 80px;
+            background: #f8f1e9;
+            color: #4a3c31;
+            padding-top: 100px;
         }
 
         .container {
@@ -58,8 +57,9 @@ unset($_SESSION['message']);
         }
 
         .dashboard h1 {
-            font-size: 2rem;
-            color: #1a5c5f;
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            color: #4a3c31;
             margin-bottom: 30px;
             text-align: center;
         }
@@ -71,28 +71,29 @@ unset($_SESSION['message']);
         }
 
         .box {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
+            background: #fff;
             padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
             text-align: center;
-            transition: transform 0.3s;
+            transition: transform 0.3s, box-shadow 0.3s;
         }
 
         .box:hover {
             transform: translateY(-5px);
+            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
         }
 
         .box h3 {
+            font-family: 'Playfair Display', serif;
             font-size: 1.8rem;
-            color: #2e8b8f;
+            color: #b89b72;
             margin-bottom: 10px;
         }
 
         .box p {
             font-size: 0.9rem;
-            color: #666;
+            color: #4a3c31;
             text-transform: capitalize;
         }
 
@@ -100,11 +101,11 @@ unset($_SESSION['message']);
             position: fixed;
             top: 20px;
             right: 20px;
-            background: rgba(255, 255, 255, 0.95);
+            background: #b89b72;
+            color: #4a3c31;
             padding: 15px;
             border-radius: 5px;
-            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
-            color: #1a5c5f;
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
             font-weight: 500;
             z-index: 1000;
         }
