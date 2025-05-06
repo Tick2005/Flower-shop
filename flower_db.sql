@@ -3,13 +3,14 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 06, 2025
+-- Generation Time: May 06, 2025 at 03:23 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
+
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -41,22 +42,6 @@ CREATE TABLE `cart` (
 -- --------------------------------------------------------
 
 --
--- Table structure for table `message`
---
-
-CREATE TABLE `message` (
-  `id` int(11) NOT NULL,
-  `user_id` bigint(20) NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `email` varchar(255) NOT NULL,
-  `number` varchar(30) NOT NULL,
-  `message` text NOT NULL,
-  `created_at` datetime DEFAULT current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
--- --------------------------------------------------------
-
---
 -- Table structure for table `orders`
 --
 
@@ -78,23 +63,16 @@ CREATE TABLE `orders` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
+-- Dumping data for table `orders`
+--
+
+INSERT INTO `orders` (`id`, `user_id`, `name`, `number`, `email`, `method`, `address`, `total_products`, `total_price`, `placed_on`, `payment_status`, `admin_approval`, `created_at`, `updated_at`) VALUES
+(605250001, 605250001, 'John Doe', '0123456789', 'john@example.com', 'COD', '123 Elm Street', 'Red Roses x2, Wedding Flowers x1', 150.00, '2025-05-06 13:05:59', 'pending', 'pending', '2025-05-06 13:05:59', '2025-05-06 13:05:59'),
+(605250002, 605250002, 'Jane Smith', '0987654321', 'jane@example.com', 'Bank Transfer', '456 Oak Street', 'Sunflower Basket x3', 120.00, '2025-05-06 13:05:59', 'confirmed', 'approved', '2025-05-06 13:05:59', '2025-05-06 13:05:59');
+
+--
 -- Triggers `orders`
 --
-DELIMITER $$
-CREATE TRIGGER `before_insert_order_id` BEFORE INSERT ON `orders` FOR EACH ROW
-BEGIN
-    DECLARE date_prefix CHAR(6);
-    DECLARE order_count INT;
-    DECLARE new_id BIGINT;
-
-    SET date_prefix = DATE_FORMAT(NEW.placed_on, '%d%m%y');
-    SELECT COUNT(*) + 1 INTO order_count
-    FROM orders
-    WHERE DATE(placed_on) = DATE(NEW.placed_on);
-    SET new_id = CONCAT(date_prefix, LPAD(order_count, 4, '0')) + 0;
-    SET NEW.id = new_id;
-END$$
-DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `after_order_insert_clear_cart` AFTER INSERT ON `orders` FOR EACH ROW BEGIN
     DELETE FROM cart WHERE user_id = NEW.user_id;
@@ -107,6 +85,21 @@ CREATE TRIGGER `after_order_status_update` AFTER UPDATE ON `orders` FOR EACH ROW
         INSERT INTO order_status_log (order_id, old_payment_status, new_payment_status, old_approval_status, new_approval_status, changed_at)
         VALUES (NEW.id, OLD.payment_status, NEW.payment_status, OLD.admin_approval, NEW.admin_approval, NOW());
     END IF;
+END
+$$
+DELIMITER ;
+DELIMITER $$
+CREATE TRIGGER `before_insert_order_id` BEFORE INSERT ON `orders` FOR EACH ROW BEGIN
+    DECLARE date_prefix CHAR(6);
+    DECLARE last_seq INT;
+    DECLARE new_id BIGINT;
+
+    SET date_prefix = DATE_FORMAT(NEW.placed_on, '%d%m%y');
+    SELECT COALESCE(MAX(CAST(SUBSTRING(id, 7, 4) AS UNSIGNED)), 0) + 1 INTO last_seq
+    FROM orders
+    WHERE DATE(placed_on) = DATE(NEW.placed_on);
+    SET new_id = CONCAT(date_prefix, LPAD(last_seq, 4, '0')) + 0;
+    SET NEW.id = new_id;
 END
 $$
 DELIMITER ;
@@ -127,6 +120,13 @@ CREATE TABLE `order_status_log` (
   `changed_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `order_status_log`
+--
+
+INSERT INTO `order_status_log` (`log_id`, `order_id`, `old_payment_status`, `new_payment_status`, `old_approval_status`, `new_approval_status`, `changed_at`) VALUES
+(1, 605250002, 'pending', 'confirmed', 'pending', 'approved', '2025-05-06 13:05:59');
+
 -- --------------------------------------------------------
 
 --
@@ -146,6 +146,64 @@ CREATE TABLE `products` (
   `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
+--
+-- Dumping data for table `products`
+--
+
+INSERT INTO `products` (`id`, `name`, `price`, `sale`, `product_detail`, `image`, `origin`, `type`, `created_at`, `updated_at`) VALUES
+(1, 'Red Roses', 25.00, 5.00, 'A classic bouquet of red roses', 'red_roses.jpg', 'Vietnam', 'bouquet', '2025-05-06 13:05:59', '2025-05-06 13:05:59'),
+(2, 'Wedding Flowers', 100.00, 15.00, 'Elegant wedding bouquet', 'wedding_flowers.jpg', 'France', 'wedding', '2025-05-06 13:05:59', '2025-05-06 13:05:59'),
+(3, 'Sunflower Basket', 40.00, 10.00, 'A sunny basket of sunflowers', 'sunflowers.jpg', 'Thailand', 'basket', '2025-05-06 13:05:59', '2025-05-06 13:05:59'),
+(4, 'Condolence Flowers', 50.00, 0.00, 'White lilies for condolences', 'condolence.jpg', 'Vietnam', 'condolence', '2025-05-06 13:05:59', '2025-05-06 13:05:59');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `reviews`
+--
+
+CREATE TABLE `reviews` (
+  `id` int(11) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  `product_id` bigint(20) NOT NULL,
+  `name` varchar(255) NOT NULL,
+  `email` varchar(255) NOT NULL,
+  `number` varchar(30) NOT NULL,
+  `message` text NOT NULL,
+  `rating` int(1) DEFAULT NULL,
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `reviews`
+--
+
+INSERT INTO `reviews` (`id`, `user_id`, `product_id`, `name`, `email`, `number`, `message`, `rating`, `created_at`) VALUES
+(1, 605250001, 1, 'John Doe', 'john@example.com', '0123456789', 'Beautiful flowers, very fresh!', 5, '2025-05-06 13:05:59'),
+(2, 605250002, 3, 'Jane Smith', 'jane@example.com', '0987654321', 'Bright and cheerful basket, loved it!', 4, '2025-05-06 13:05:59');
+
+-- --------------------------------------------------------
+
+--
+-- Table structure for table `review_replies`
+--
+
+CREATE TABLE `review_replies` (
+  `id` int(11) NOT NULL,
+  `review_id` int(11) NOT NULL,
+  `admin_id` bigint(20) NOT NULL,
+  `reply` text NOT NULL,
+  `created_at` datetime DEFAULT current_timestamp()
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `review_replies`
+--
+
+INSERT INTO `review_replies` (`id`, `review_id`, `admin_id`, `reply`, `created_at`) VALUES
+(1, 1, 605250003, 'Thank you for your positive feedback!', '2025-05-06 13:05:59'),
+(2, 2, 605250003, 'We appreciate your review, thank you!', '2025-05-06 13:05:59');
+
 -- --------------------------------------------------------
 
 --
@@ -164,22 +222,31 @@ CREATE TABLE `users` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
+-- Dumping data for table `users`
+--
+
+INSERT INTO `users` (`id`, `name`, `email`, `password`, `status`, `user_type`, `created_at`, `updated_at`) VALUES
+(605250001, 'John Doe', 'john@example.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Online', 'user', '2025-05-06 13:05:59', '2025-05-06 20:09:46'),
+(605250002, 'Jane Smith', 'jane@example.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Offline', 'user', '2025-05-06 13:05:59', '2025-05-06 20:09:51'),
+(605250003, 'Admin User', 'admin@example.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Online', 'admin', '2025-05-06 13:05:59', '2025-05-06 20:22:23');
+
+--
 -- Triggers `users`
 --
 DELIMITER $$
-CREATE TRIGGER `before_insert_user_id` BEFORE INSERT ON `users` FOR EACH ROW
-BEGIN
+CREATE TRIGGER `before_insert_user_id` BEFORE INSERT ON `users` FOR EACH ROW BEGIN
     DECLARE date_prefix CHAR(6);
-    DECLARE user_count INT;
+    DECLARE last_seq INT;
     DECLARE new_id BIGINT;
 
     SET date_prefix = DATE_FORMAT(NOW(), '%d%m%y');
-    SELECT COUNT(*) + 1 INTO user_count
+    SELECT COALESCE(MAX(CAST(SUBSTRING(id, 7, 4) AS UNSIGNED)), 0) + 1 INTO last_seq
     FROM users
     WHERE DATE(created_at) = CURDATE();
-    SET new_id = CONCAT(date_prefix, LPAD(user_count, 4, '0')) + 0;
+    SET new_id = CONCAT(date_prefix, LPAD(last_seq, 4, '0')) + 0;
     SET NEW.id = new_id;
-END$$
+END
+$$
 DELIMITER ;
 
 -- --------------------------------------------------------
@@ -200,6 +267,14 @@ CREATE TABLE `wishlist` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
+-- Dumping data for table `wishlist`
+--
+
+INSERT INTO `wishlist` (`id`, `user_id`, `pid`, `name`, `price`, `image`, `created_at`, `updated_at`) VALUES
+(1, 605250001, 3, 'Sunflower Basket', 40.00, 'sunflowers.jpg', '2025-05-06 13:05:59', '2025-05-06 13:05:59'),
+(2, 605250002, 1, 'Red Roses', 25.00, 'red_roses.jpg', '2025-05-06 13:05:59', '2025-05-06 13:05:59');
+
+--
 -- Indexes for dumped tables
 --
 
@@ -210,13 +285,6 @@ ALTER TABLE `cart`
   ADD PRIMARY KEY (`id`),
   ADD UNIQUE KEY `user_id` (`user_id`,`pid`),
   ADD KEY `pid` (`pid`);
-
---
--- Indexes for table `message`
---
-ALTER TABLE `message`
-  ADD PRIMARY KEY (`id`),
-  ADD KEY `user_id` (`user_id`);
 
 --
 -- Indexes for table `orders`
@@ -237,6 +305,22 @@ ALTER TABLE `order_status_log`
 --
 ALTER TABLE `products`
   ADD PRIMARY KEY (`id`);
+
+--
+-- Indexes for table `reviews`
+--
+ALTER TABLE `reviews`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `product_id` (`product_id`);
+
+--
+-- Indexes for table `review_replies`
+--
+ALTER TABLE `review_replies`
+  ADD PRIMARY KEY (`id`),
+  ADD KEY `review_id` (`review_id`),
+  ADD KEY `admin_id` (`admin_id`);
 
 --
 -- Indexes for table `users`
@@ -261,31 +345,37 @@ ALTER TABLE `wishlist`
 -- AUTO_INCREMENT for table `cart`
 --
 ALTER TABLE `cart`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
-
---
--- AUTO_INCREMENT for table `message`
---
-ALTER TABLE `message`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
 
 --
 -- AUTO_INCREMENT for table `order_status_log`
 --
 ALTER TABLE `order_status_log`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
 
 --
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+
+--
+-- AUTO_INCREMENT for table `reviews`
+--
+ALTER TABLE `reviews`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+
+--
+-- AUTO_INCREMENT for table `review_replies`
+--
+ALTER TABLE `review_replies`
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- AUTO_INCREMENT for table `wishlist`
 --
 ALTER TABLE `wishlist`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
 
 --
 -- Constraints for dumped tables
@@ -297,12 +387,6 @@ ALTER TABLE `wishlist`
 ALTER TABLE `cart`
   ADD CONSTRAINT `cart_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `cart_ibfk_2` FOREIGN KEY (`pid`) REFERENCES `products` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `message`
---
-ALTER TABLE `message`
-  ADD CONSTRAINT `message_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `orders`
@@ -317,6 +401,20 @@ ALTER TABLE `order_status_log`
   ADD CONSTRAINT `order_status_log_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
+-- Constraints for table `reviews`
+--
+ALTER TABLE `reviews`
+  ADD CONSTRAINT `reviews_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `reviews_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
+-- Constraints for table `review_replies`
+--
+ALTER TABLE `review_replies`
+  ADD CONSTRAINT `review_replies_ibfk_1` FOREIGN KEY (`review_id`) REFERENCES `reviews` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `review_replies_ibfk_2` FOREIGN KEY (`admin_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+
+--
 -- Constraints for table `wishlist`
 --
 ALTER TABLE `wishlist`
@@ -327,46 +425,3 @@ COMMIT;
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
 /*!40101 SET CHARACTER_SET_RESULTS=@OLD_CHARACTER_SET_RESULTS */;
 /*!40101 SET COLLATION_CONNECTION=@OLD_COLLATION_CONNECTION */;
--- 1. Insert into users (3 users: 2 customers, 1 admin)
-INSERT INTO users (name, email, password, status, user_type, created_at, updated_at)
-VALUES
-    ('Nguyen Van A', 'user1@gmail.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Offline', 'user', '2025-01-12 08:00:00', '2025-01-12 08:00:00'),
-    ('Tran Thi B', 'user2@gmail.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Offline', 'user', '2025-01-12 09:00:00', '2025-01-12 09:00:00'),
-    ('Admin', 'admin@gmail.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Offline', 'admin', '2025-01-12 10:00:00', '2025-01-12 10:00:00');
--- IDs: 1201250001, 1201250002, 1201250003 (generated by trigger)
-
--- 2. Insert into products (3 products: bouquet, basket, wedding flowers)
-INSERT INTO products (id, name, price, sale, product_detail, image, origin, type, created_at, updated_at)
-VALUES
-    (1, 'Rose Bouquet', 25.00, 0.00, 'A beautiful bouquet of 12 red roses.', 'rose_bouquet.jpg', 'Vietnam', 'bouquet', '2025-01-12 07:00:00', '2025-01-12 07:00:00'),
-    (2, 'Lily Basket', 40.00, 5.00, 'A basket of white lilies and greenery.', 'lily_basket.jpg', 'Netherlands', 'basket', '2025-01-12 07:00:00', '2025-01-12 07:00:00'),
-    (3, 'Wedding Arrangement', 100.00, 0.00, 'Elegant floral arrangement for weddings.', 'wedding_arrangement.jpg', 'France', 'wedding', '2025-01-12 07:00:00', '2025-01-12 07:00:00');
-
--- 3. Insert into cart (2 items in cart for user1 and user2)
-INSERT INTO cart (user_id, pid, name, price, quantity, image, created_at, updated_at)
-VALUES
-    (1201250001, 1, 'Rose Bouquet', 25.00, 2, 'rose_bouquet.jpg', '2025-01-12 08:30:00', '2025-01-12 08:30:00'),
-    (1201250002, 2, 'Lily Basket', 40.00, 1, 'lily_basket.jpg', '2025-01-12 09:30:00', '2025-01-12 09:30:00');
-
--- 4. Insert into wishlist (1 item in wishlist for user1)
-INSERT INTO wishlist (user_id, pid, name, price, image, created_at, updated_at)
-VALUES
-    (1201250001, 3, 'Wedding Arrangement', 100.00, 'wedding_arrangement.jpg', '2025-01-12 08:45:00', '2025-01-12 08:45:00');
-
--- 5. Insert into message (1 message from user1)
-INSERT INTO message (user_id, name, email, number, message, created_at)
-VALUES
-    (1201250001, 'Nguyen Van A', 'user1@gmail.com', '0901234567', 'Can you customize a bouquet for my birthday?', '2025-01-12 08:50:00');
-
--- 6. Insert into orders (2 orders for user1 and user2)
-INSERT INTO orders (user_id, name, number, email, method, address, total_products, total_price, placed_on, payment_status, admin_approval)
-VALUES
-    (1201250001, 'Nguyen Van A', '0901234567', 'user1@gmail.com', 'COD', '123 Hanoi St, Hanoi', 'Rose Bouquet x2', 50.00, '2025-01-12 09:00:00', 'pending', 'pending'),
-    (1201250002, 'Tran Thi B', '0907654321', 'user2@gmail.com', 'Bank Transfer', '456 Saigon St, HCMC', 'Lily Basket x1', 40.00, '2025-01-12 10:00:00', 'confirmed', 'approved');
--- IDs: 1201250001, 1201250002 (generated by trigger)
-
--- 7. Insert into order_status_log (2 logs for orders)
-INSERT INTO order_status_log (order_id, old_payment_status, new_payment_status, old_approval_status, new_approval_status, changed_at)
-VALUES
-    (1201250001, NULL, 'pending', NULL, 'pending', '2025-01-12 09:00:00'),
-    (1201250002, 'pending', 'confirmed', 'pending', 'approved', '2025-01-12 10:30:00');
