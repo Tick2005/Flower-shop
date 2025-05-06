@@ -20,16 +20,24 @@ if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY']) >
 }
 $_SESSION['LAST_ACTIVITY'] = time();
 
-// Fetch cart items
+// Fetch cart items with product price and sale information
 $cart_items = [];
 $total_price = 0;
-$stmt = $conn->prepare("SELECT * FROM cart WHERE user_id = ?");
+$stmt = $conn->prepare("
+    SELECT c.id, c.pid, c.name, p.price, c.quantity, c.image, p.sale 
+    FROM cart c 
+    JOIN products p ON c.pid = p.id 
+    WHERE c.user_id = ?
+");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $result = $stmt->get_result();
 while ($row = $result->fetch_assoc()) {
     $cart_items[] = $row;
-    $total_price += $row['price'] * $row['quantity'];
+    // Debug: Verify price and sale values
+    // error_log("Item: {$row['name']}, Price: {$row['price']}, Sale: {$row['sale']}, Discounted: " . ($row['price'] * (100 - $row['sale']) / 100));
+    $discounted_price = $row['price'] * (100 - $row['sale']) / 100;
+    $total_price += $discounted_price * $row['quantity'];
 }
 
 // Fetch cart count
@@ -44,19 +52,25 @@ if (isset($_POST['update_quantity'])) {
     if ($quantity > 0) {
         $stmt = $conn->prepare("UPDATE cart SET quantity = ? WHERE id = ? AND user_id = ?");
         $stmt->bind_param("iii", $quantity, $cart_id, $user_id);
-        if ($stmt->execute()) {
+        if ($stmt->execute() && $stmt->affected_rows > 0) {
             $message[] = "Quantity updated!";
             // Refresh cart items
             $total_price = 0;
-            $stmt = $conn->prepare("SELECT * FROM cart WHERE user_id = ?");
+            $stmt = $conn->prepare("
+                SELECT c.id, c.pid, c.name, p.price, c.quantity, c.image, p.sale 
+                FROM cart c 
+                JOIN products p ON c.pid = p.id 
+                WHERE c.user_id = ?
+            ");
             $stmt->bind_param("i", $user_id);
             $stmt->execute();
             $cart_items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             foreach ($cart_items as $item) {
-                $total_price += $item['price'] * $item['quantity'];
+                $discounted_price = $item['price'] * (100 - $item['sale']) / 100;
+                $total_price += $discounted_price * $item['quantity'];
             }
         } else {
-            $message[] = "Failed to update quantity.";
+            $message[] = "Failed to update quantity or item not found.";
         }
     } else {
         $message[] = "Quantity must be greater than 0.";
@@ -68,20 +82,26 @@ if (isset($_POST['remove_item'])) {
     $cart_id = filter_var($_POST['cart_id'], FILTER_SANITIZE_NUMBER_INT);
     $stmt = $conn->prepare("DELETE FROM cart WHERE id = ? AND user_id = ?");
     $stmt->bind_param("ii", $cart_id, $user_id);
-    if ($stmt->execute()) {
+    if ($stmt->execute() && $stmt->affected_rows > 0) {
         $message[] = "Item removed from cart!";
         // Refresh cart items
         $total_price = 0;
-        $stmt = $conn->prepare("SELECT * FROM cart WHERE user_id = ?");
+        $stmt = $conn->prepare("
+            SELECT c.id, c.pid, c.name, p.price, c.quantity, c.image, p.sale 
+            FROM cart c 
+            JOIN products p ON c.pid = p.id 
+            WHERE c.user_id = ?
+        ");
         $stmt->bind_param("i", $user_id);
         $stmt->execute();
         $cart_items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         foreach ($cart_items as $item) {
-            $total_price += $item['price'] * $item['quantity'];
+            $discounted_price = $item['price'] * (100 - $item['sale']) / 100;
+            $total_price += $discounted_price * $item['quantity'];
         }
         $cart_count = count($cart_items);
     } else {
-        $message[] = "Failed to remove item.";
+        $message[] = "Failed to remove item or item not found.";
     }
 }
 ?>
@@ -131,7 +151,8 @@ if (isset($_POST['remove_item'])) {
                         <a href="/products/birthday" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Birthday Flowers</a>
                         <a href="/products/wedding" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Wedding Flowers</a>
                         <a href="/products/bouquet" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Bouquets</a>
-                        <a href="/products/basket" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Baskets</a>
+                        <a href="/products/basket" class="block px-4 py-2 text-gray-7
+00 hover:bg-green-100">Baskets</a>
                     </div>
                 </div>
                 <a href="/about" class="text-gray-700 hover:text-green-500">About</a>
@@ -194,7 +215,13 @@ if (isset($_POST['remove_item'])) {
                                         <img src="<?php echo htmlspecialchars($item['image']); ?>" alt="<?php echo htmlspecialchars($item['name']); ?>" class="w-16 h-16 object-cover rounded">
                                     </td>
                                     <td class="py-4"><?php echo htmlspecialchars($item['name']); ?></td>
-                                    <td class="py-4"><?php echo number_format($item['price'], 2, ',', '.'); ?>đ</td>
+                                    <td class="py-4">
+                                        <?php 
+                                        // Calculate discounted price using products.price
+                                        $discounted_price = $item['price'] * (100 - $item['sale']) / 100;
+                                        echo number_format($discounted_price, 2, ',', '.'); 
+                                        ?>đ
+                                    </td>
                                     <td class="py-4">
                                         <form action="" method="POST">
                                             <input type="hidden" name="cart_id" value="<?php echo $item['id']; ?>">
@@ -202,7 +229,9 @@ if (isset($_POST['remove_item'])) {
                                             <button type="submit" name="update_quantity" class="text-green-500 hover:text-green-600"><i class="fas fa-sync-alt"></i></button>
                                         </form>
                                     </td>
-                                    <td class="py-4"><?php echo number_format($item['price'] * $item['quantity'], 2, ',', '.'); ?>đ</td>
+                                    <td class="py-4">
+                                        <?php echo number_format($discounted_price * $item['quantity'], 2, ',', '.'); ?>đ
+                                    </td>
                                     <td class="py-4">
                                         <form action="" method="POST">
                                             <input type="hidden" name="cart_id" value="<?php echo $item['id']; ?>">
