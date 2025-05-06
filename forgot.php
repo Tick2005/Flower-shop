@@ -1,87 +1,102 @@
 <?php
-include 'connection.php';
+ob_start(); // Start output buffering
 session_start();
+include 'connection.php';
 
+// Handle cancel action first to avoid header issues
+if (isset($_GET['cancel']) && $_GET['cancel'] === 'true') {
+    unset($_SESSION['reset_email'], $_SESSION['captcha'], $_SESSION['captcha_verified']);
+    header('Location: forgot.php');
+    exit();
+}
+
+$message = [];
+
+// Generate CSRF token if not set
+if (!isset($_SESSION['csrf_token'])) {
+    $_SESSION['csrf_token'] = bin2hex(random_bytes(32));
+}
+
+// Password validation function
 function validate_password($password) {
-    // Check length (8-30 characters)
     if (strlen($password) < 8 || strlen($password) > 30) {
         return "Password must be between 8 and 30 characters!";
     }
-    // Check for at least 1 special character
     if (!preg_match("/[!@#$%^&*(),.?\":{}|<>]/", $password)) {
         return "Password must contain at least 1 special character!";
     }
-    // Check for at least 1 number
     if (!preg_match("/[0-9]/", $password)) {
         return "Password must contain at least 1 number!";
     }
-    // Check for at least 1 uppercase letter
     if (!preg_match("/[A-Z]/", $password)) {
         return "Password must contain at least 1 uppercase letter!";
     }
     return true;
 }
 
-$message = [];
-$step = 1;
-$generated_captcha = $_SESSION['generated_captcha'] ?? '';
-$email = $_SESSION['reset_email'] ?? '';
-
-if (isset($_POST['check-email'])) {
-    $email = mysqli_real_escape_string($conn, filter_var($_POST['email'], FILTER_SANITIZE_EMAIL));
-    $_SESSION['reset_email'] = $email;
-
-    $stmt = $conn->prepare("SELECT * FROM users WHERE email=?");
-    $stmt->bind_param("s", $email);
-    $stmt->execute();
-    $res = $stmt->get_result();
-
-    if ($res->num_rows > 0) {
-        $step = 2;
-        $captcha = substr(str_shuffle("ABCDEFGHIJKLMNOPQRSTUVWXYZ1234567890"), 0, 10);
-        $_SESSION['generated_captcha'] = $captcha;
-    } else {
-        $message[] = "❌ Email not found!";
-    }
-}
-
-if (isset($_POST['verify-captcha'])) {
-    if (isset($_SESSION['generated_captcha']) && $_POST['captcha_input'] === $_SESSION['generated_captcha']) {
-        $step = 3;
-    } else {
-        $message[] = "❌ Incorrect CAPTCHA!";
-        $step = 2;
-    }
-}
-
-if (isset($_POST['reset-password'])) {
-    $new_password = $_POST['new_password'];
+// Handle email check
+if (isset($_POST['check_email']) && isset($_POST['csrf_token']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
+    $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
     
-    // Validate new password
-    $password_validation = validate_password($new_password);
-    if ($password_validation !== true) {
-        $message[] = $password_validation;
-        $step = 3;
+    if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        $message[] = 'Invalid email format!';
     } else {
-        $hashed_password = password_hash($new_password, PASSWORD_DEFAULT);
-        $email = $_SESSION['reset_email'] ?? '';
-
-        $update = $conn->prepare("UPDATE users SET password=? WHERE email=?");
-        $update->bind_param("ss", $hashed_password, $email);
-        $update->execute();
-
-        $stmt = $conn->prepare("SELECT name FROM users WHERE email=?");
+        $stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
-        $res = $stmt->get_result();
-        $user = $res->fetch_assoc();
-
-        if (!$user) {
-            $message[] = "❌ Unexpected error: user not found.";
-            $step = 4;
+        $result = $stmt->get_result();
+        
+        if ($result->num_rows > 0) {
+            $_SESSION['reset_email'] = $email;
+            $_SESSION['captcha'] = rand(100000, 999999); // Generate CAPTCHA
+            $message[] = 'Please enter the CAPTCHA code: ' . $_SESSION['captcha'];
         } else {
-            $step = 4;
-            session_destroy();
+            $message[] = 'Email not found!';
+        }
+        $stmt->close();
+    }
+}
+
+// Handle CAPTCHA verification
+if (isset($_POST['verify_captcha']) && isset($_POST['csrf_token']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
+    $captcha_input = filter_var($_POST['captcha'], FILTER_SANITIZE_STRING);
+    
+    if (isset($_SESSION['captcha']) && $captcha_input == $_SESSION['captcha']) {
+        $message[] = 'CAPTCHA verified! Please enter your new password.';
+        $_SESSION['captcha_verified'] = true;
+    } else {
+        $message[] = 'Invalid CAPTCHA code!';
+    }
+}
+
+// Handle password reset
+if (isset($_POST['reset_password']) && isset($_POST['csrf_token']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
+    if (!isset($_SESSION['captcha_verified']) || !$_SESSION['captcha_verified']) {
+        $message[] = 'Please verify CAPTCHA first!';
+    } else {
+        $password = $_POST['password'];
+        $cpassword = $_POST['cpassword'];
+        $email = $_SESSION['reset_email'];
+        
+        $password_validation = validate_password($password);
+        if ($password_validation !== true) {
+            $message[] = $password_validation;
+        } elseif ($password !== $cpassword) {
+            $message[] = 'Passwords do not match!';
+        } else {
+            $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+            $stmt = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
+            $stmt->bind_param("ss", $hashed_password, $email);
+            
+            if ($stmt->execute()) {
+                $message[] = 'Password reset successfully!';
+                unset($_SESSION['reset_email'], $_SESSION['captcha'], $_SESSION['captcha_verified']);
+                header('Location: login.php?reset_success=true');
+                exit();
+            } else {
+                $message[] = 'Failed to reset password!';
+            }
+            $stmt->close();
         }
     }
 }
@@ -90,157 +105,217 @@ if (isset($_POST['reset-password'])) {
 <!DOCTYPE html>
 <html lang="en">
 <head>
-    <meta charset="UTF-8"/>
-    <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-    <title>Forgot Password</title>
-    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600&display=swap" rel="stylesheet">
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Forgot Password - Flower Shop</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: "Poppins", sans-serif;
+            font-family: 'Roboto', sans-serif;
         }
 
         body {
+            background: url('https://images.unsplash.com/photo-1509266272358-7701da638078?ixlib=rb-4.0.3&auto=format&fit=crop&w=1950&q=80') no-repeat center center fixed;
+            background-size: cover;
             display: flex;
-            flex-direction: column;
             justify-content: center;
             align-items: center;
             min-height: 100vh;
-            background: url(image/background.webp);
-            background-size: cover;
-            background-position: center;
-            color: white;
         }
 
-        section form {
-            width: 400px;
-            background: rgba(255,255,255,.1);
-            -webkit-backdrop-filter: blur(15px);
-            backdrop-filter: blur(15px);
-            border-radius: 10px;
-            padding: 30px 40px;
-            box-shadow: 0 0 10px rgba(0,0,0,.2);
-            margin-bottom: 20px;
-        }
-
-        h1 {
+        .form-container {
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
+            padding: 40px;
+            border-radius: 15px;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
+            max-width: 400px;
+            width: 100%;
             text-align: center;
+        }
+
+        .form-container h1 {
+            font-family: 'Playfair Display', serif;
+            font-size: 2.5rem;
+            color: #4a3c31;
             margin-bottom: 20px;
         }
 
         .input-box {
             position: relative;
-            margin-bottom: 20px;
+            margin: 20px 0;
         }
 
         .input-box input {
             width: 100%;
-            height: 50px;
-            border-radius: 25px;
-            border: 2px solid rgba(255,255,255,.2);
+            padding: 12px 15px;
+            border: 1px solid #d4c7b0;
+            border-radius: 5px;
             background: transparent;
-            color: white;
-            padding-left: 20px;
+            font-size: 1rem;
+            color: #4a3c31;
+            transition: border-color 0.3s;
         }
 
-        .input-box input::placeholder {
-            color: white;
+        .input-box input:focus {
+            outline: none;
+            border-color: #b89b72;
         }
 
         .input-box i {
             position: absolute;
-            right: 20px;
             top: 50%;
+            right: 15px;
             transform: translateY(-50%);
-            color: white;
+            color: #b89b72;
+        }
+
+        .message {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
         }
 
         button {
             width: 100%;
-            height: 45px;
+            padding: 12px;
+            background: #b89b72;
             border: none;
-            border-radius: 25px;
-            background: white;
-            color: #333;
+            border-radius: 5px;
+            color: #fff;
+            font-size: 1rem;
+            font-weight: 500;
             cursor: pointer;
-            font-weight: 600;
-            margin-top: 10px;
+            transition: background 0.3s, transform 0.2s;
         }
 
-        .remember-forgot {
-            display: flex;
-            justify-content: space-between;
-            margin: 10px 0;
-            font-size: 14px;
+        button:hover {
+            background: #a68a64;
+            transform: translateY(-2px);
         }
 
-        .remember-forgot a,
-        p a {
-            color: white;
+        .cancel-btn {
+            background: #e57373;
+        }
+
+        .cancel-btn:hover {
+            background: #d32f2f;
+            transform: translateY(-2px);
+        }
+
+        .form-container p {
+            margin-top: 20px;
+            font-size: 0.9rem;
+            color: #4a3c31;
+        }
+
+        .form-container p a {
+            color: #b89b72;
             text-decoration: none;
         }
 
-        .remember-forgot a:hover,
-        p a:hover {
+        .form-container p a:hover {
             text-decoration: underline;
         }
 
-        p {
-            text-align: center;
-            margin-top: 15px;
-        }
+        @media (max-width: 480px) {
+            .form-container {
+                padding: 20px;
+            }
 
-        .message {
-            text-align: center;
-            color: yellow;
-            margin-bottom: 15px;
+            .form-container h1 {
+                font-size: 2rem;
+            }
         }
     </style>
 </head>
 <body>
     <section class="form-container">
-        <form action="" method="POST">
-            <h1>Reset Password</h1>
-
-            <?php foreach ($message as $msg): ?>
-                <div class="message"><p><?= htmlspecialchars($msg) ?></p></div>
-            <?php endforeach; ?>
-
-            <?php if ($step === 1): ?>
-                <div class="input-box">
-                    <input type="email" name="email" placeholder="Enter your email" required>
-                </div>
-                <button type="submit" name="check-email">Check Email</button>
-
-            <?php elseif ($step === 2): ?>
-                <div class="input-box">
-                    <input type="text" value="<?= $_SESSION['generated_captcha'] ?>" readonly disabled>
-                </div>
-                <div class="input-box">
-                    <input type="text" name="captcha_input" placeholder="Enter CAPTCHA" required>
-                </div>
-                <button type="submit" name="verify-captcha">Verify</button>
-
-            <?php elseif ($step === 3): ?>
-                <div class="input-box">
-                    <input type="password" name="new_password" placeholder="Enter new password" required>
-                </div>
-                <button type="submit" name="reset-password">Reset Password</button>
-
-            <?php elseif ($step === 4): ?>
-                <p>✅ Password updated! Redirecting to <a href="login.php">Login</a>...</p>
-                <script>
-                    setTimeout(() => window.location.href = 'login.php', 3000);
-                </script>
-            <?php endif; ?>
+        <?php
+        if (!isset($_SESSION['reset_email'])) {
+            // Email input form
+        ?>
+        <form action="" method="post">
+            <h1>Forgot Password</h1>
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
+            <div class="input-box">
+                <input type="email" name="email" placeholder="Enter your email" required>
+                <i class="fa-solid fa-envelope"></i>
+            </div>
+            <?php
+            if (!empty($message)) {
+                foreach ($message as $msg) {
+                    echo '<div class="message"><p>' . htmlspecialchars($msg) . '</p></div>';
+                }
+            }
+            ?>
+            <button type="submit" name="check_email">Submit</button>
+            <p><a href="login.php">Back to Login</a></p>
         </form>
+        <?php
+        } elseif (isset($_SESSION['reset_email']) && !isset($_SESSION['captcha_verified'])) {
+            // CAPTCHA verification form
+        ?>
+        <form action="" method="post">
+            <h1>Verify CAPTCHA</h1>
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
+            <div class="input-box">
+                <input type="text" name="captcha" placeholder="Enter CAPTCHA code" required>
+                <i class="fa-solid fa-key"></i>
+            </div>
+            <?php
+            if (!empty($message)) {
+                foreach ($message as $msg) {
+                    echo '<div class="message"><p>' . htmlspecialchars($msg) . '</p></div>';
+                }
+            }
+            ?>
+            <button type="submit" name="verify_captcha">Verify</button>
+            <button type="button" class="cancel-btn" onclick="window.location.href='forgot.php?cancel=true'">Cancel</button>
+        </form>
+        <?php
+        } elseif (isset($_SESSION['captcha_verified']) && $_SESSION['captcha_verified']) {
+            // Password reset form
+        ?>
+        <form action="" method="post">
+            <h1>Reset Password</h1>
+            <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
+            <div class="input-box">
+                <input type="password" name="password" placeholder="New Password" required>
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <div class="input-box">
+                <input type="password" name="cpassword" placeholder="Confirm Password" required>
+                <i class="fa-solid fa-lock"></i>
+            </div>
+            <?php
+            if (!empty($message)) {
+                foreach ($message as $msg) {
+                    echo '<div class="message"><p>' . htmlspecialchars($msg) . '</p></div>';
+                }
+            }
+            ?>
+            <button type="submit" name="reset_password">Reset Password</button>
+            <button type="button" class="cancel-btn" onclick="window.location.href='forgot.php?cancel=true'">Cancel</button>
+        </form>
+        <?php
+        }
+        ?>
     </section>
     <script>
-        set(join => {
+        setTimeout(() => {
             document.querySelectorAll('.message').forEach(msg => msg.remove());
         }, 3000);
     </script>
 </body>
 </html>
+<?php
+ob_end_flush(); // Flush the output buffer
+?>
