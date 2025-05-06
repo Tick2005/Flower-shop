@@ -3,14 +3,13 @@ include 'connection.php';
 session_start();
 
 // Check if user is logged in
-$user_id =  $_SESSION['user_id'] ?? null;
+$user_id = $_SESSION['user_id'] ?? null;
 $user_name = $_SESSION['user_name'] ?? null;
 if (!isset($user_id)) {
     session_destroy();
     header('Location: login.php');
     exit();
 }
-
 
 // Fetch cart count
 $cart_count = 0;
@@ -51,8 +50,35 @@ if (isset($_POST['add_to_cart']) && $user_id) {
         }
     }
 }
-if(isset($_POST['logout'])){
-    $stmt= $conn->prepare("UPDATE users SET status='Offline' WHERE id=?");
+
+// Handle add to wishlist
+if (isset($_POST['add_to_wishlist']) && $user_id) {
+    $pid = filter_var($_POST['pid'], FILTER_SANITIZE_NUMBER_INT);
+    $name = mysqli_real_escape_string($conn, filter_var($_POST['name'], FILTER_SANITIZE_STRING));
+    $price = filter_var($_POST['price'], FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
+    $image = mysqli_real_escape_string($conn, filter_var($_POST['image'], FILTER_SANITIZE_STRING));
+
+    $stmt = $conn->prepare("SELECT * FROM wishlist WHERE user_id = ? AND pid = ?");
+    $stmt->bind_param("ii", $user_id, $pid);
+    $stmt->execute();
+    $result = $stmt->get_result();
+
+    if ($result->num_rows > 0) {
+        $message[] = "Product already in wishlist!";
+    } else {
+        $stmt = $conn->prepare("INSERT INTO wishlist (user_id, pid, name, price, image) VALUES (?, ?, ?, ?, ?)");
+        $stmt->bind_param("iisds", $user_id, $pid, $name, $price, $image);
+        if ($stmt->execute()) {
+            $message[] = "Product added to wishlist!";
+        } else {
+            $message[] = "Failed to add product to wishlist.";
+        }
+    }
+}
+
+// Handle logout
+if (isset($_POST['logout'])) {
+    $stmt = $conn->prepare("UPDATE users SET status='Offline' WHERE id=?");
     $stmt->bind_param("i", $user_id);
     $stmt->execute();
     $stmt->close();
@@ -68,11 +94,20 @@ if(isset($_POST['logout'])){
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Flower Shop - Customer Home</title>
-    <link rel="stylesheet" href="style1.css">
+    <link rel="stylesheet" href="style1.css?v=1.0">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"/>
 </head>
 <body>
+    <!-- Display Messages -->
+    <?php if (!empty($message)): ?>
+        <div class="fixed top-4 right-4 z-50">
+            <?php foreach ($message as $msg): ?>
+                <div class="message bg-green-500 text-white p-4 rounded shadow-md mb-2"><?php echo htmlspecialchars($msg); ?></div>
+            <?php endforeach; ?>
+        </div>
+    <?php endif; ?>
+
     <header class="header bg-green-50 shadow-md sticky top-0 z-50">
         <div class="container mx-auto px-4 py-4 flex justify-between items-center">
             <div class="flex items-center space-x-6">
@@ -106,10 +141,10 @@ if(isset($_POST['logout'])){
                     <div class="dropdown-menu hidden absolute bg-white shadow-lg rounded-md mt-2 w-48">
                         <a href="/products/birthday" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Birthday Flowers</a>
                         <a href="/products/wedding" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Wedding Flowers</a>
-                        <a href="/products/wedding" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Condolence Flowers</a>
+                        <a href="/products/condolence" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Condolence Flowers</a>
                         <a href="/products/bouquet" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Bouquets</a>
                         <a href="/products/basket" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Baskets</a>
-                        <a href="/products/basket" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Other</a>
+                        <a href="/products/other" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Other</a>
                     </div>
                 </div>
                 <div class="relative dropdown">
@@ -121,10 +156,12 @@ if(isset($_POST['logout'])){
                     </a>
                     <div class="dropdown-menu hidden absolute bg-white shadow-lg rounded-md mt-2 w-48 right-0">
                         <a href="customer_info.php" class="block px-4 py-2 text-gray-700 hover:bg-green-100">My Account</a>
-                        <a href="index.php" name="logout" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Logout</a>
+                        <form method="POST" action="">
+                            <button type="submit" name="logout" class="block w-full text-left px-4 py-2 text-gray-700 hover:bg-green-100">Logout</button>
+                        </form>
                     </div>
                 </div>
-                <a href="/cart" class="text-gray-700 hover:text-green-500 relative">
+                <a href="cart.php" class="text-gray-700 hover:text-green-500 relative">
                     <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
                     </svg>
@@ -140,270 +177,173 @@ if(isset($_POST['logout'])){
     </header>
 
     <main>
-        <!-- Slider -->
+        <!-- Slider (unchanged) -->
         <div class="slider">
             <div class="slides">
-                <!-- Slide 1 -->
                 <div class="slide" style="background-image: url('image/flower_slider1.jpg');">
-                <div class="slide-content">
-                    <h2 class="text-green-500">Pink Rose Bouquet</h2>
-                    <h3 class="text-green-400">Spring - Summer 2025</h3>
-                    <p>A beautiful bouquet of pink roses, perfect for any occasion. Freshly picked and elegantly arranged to bring joy to your loved ones.</p>
+                    <div class="slide-content">
+                        <h2 class="text-green-500">Pink Rose Bouquet</h2>
+                        <h3 class="text-green-400">Spring - Summer 2025</h3>
+                        <p>A beautiful bouquet of pink roses, perfect for any occasion. Freshly picked and elegantly arranged to bring joy to your loved ones.</p>
+                    </div>
                 </div>
-                </div>
-                <!-- Slide 2 -->
                 <div class="slide" style="background-image: url('image/flower_slider2.jpg');">
-                <div class="slide-content">
-                    <h2 class="text-green-500">White Flower Box</h2>
-                    <h3 class="text-green-400">Spring - Summer 2025</h3>
-                    <p>An elegant box of white flowers, designed to impress. Ideal for gifting or decorating your special events.</p>
+                    <div class="slide-content">
+                        <h2 class="text-green-500">White Flower Box</h2>
+                        <h3 class="text-green-400">Spring - Summer 2025</h3>
+                        <p>An elegant box of white flowers, designed to impress. Ideal for gifting or decorating your special events.</p>
+                    </div>
                 </div>
-                </div>
-                <!-- Slide 3 -->
                 <div class="slide" style="background-image: url('image/flower_slider3.jpg');">
-                <div class="slide-content">
-                    <h2 class="text-green-500">Yellow & White Roses</h2>
-                    <h3 class="text-green-400">Spring - Summer 2025</h3>
-                    <p>A vibrant mix of yellow and white roses, symbolizing friendship and purity. Perfect for brightening someone's day.</p>
-                </div>
+                    <div class="slide-content">
+                        <h2 class="text-green-500">Yellow & White Roses</h2>
+                        <h3 class="text-green-400">Spring - Summer 2025</h3>
+                        <p>A vibrant mix of yellow and white roses, symbolizing friendship and purity. Perfect for brightening someone's day.</p>
+                    </div>
                 </div>
             </div>
             <button class="slider-btn prev">❮</button>
             <button class="slider-btn next">❯</button>
         </div>
 
+        <!-- About Us Section (unchanged) -->
+        <section class="about-section">
+            <div class="container mx-auto px-4">
+                <h2 class="text-3xl font-bold mb-6">About Us</h2>
+                <p class="mb-4">
+                    Welcome to Flower Shop, your go-to destination for fresh and beautiful flowers since 2015. We are passionate about bringing nature's finest blooms to your doorstep, whether you're celebrating a special occasion or simply want to brighten someone's day. Our mission is to create stunning floral arrangements that convey your emotions and make every moment memorable.
+                </p>
+                <p class="mb-4">
+                    At Flower Shop, we source our flowers from the best local and international growers, ensuring quality and freshness in every bouquet. Our dedicated team of florists works with love and creativity to craft arrangements that suit every taste and style.
+                </p>
+                <p>
+                    Visit us at 123 Flower Street, City, Country, or reach out via phone at +123 456 7890 or email at support@flowershop.com. We’re open daily from 7:30 to 21:30, ready to serve you with a smile!
+                </p>
+            </div>
+        </section>
         <!-- Product Grid Section -->
         <section class="py-12 bg-gray-100">
-        <div class="container mx-auto px-4">
-            <h2 class="text-2xl font-bold text-white text-center bg-green-800 py-4 mb-8 rounded">BỘ HOA TƯƠI ĐẸP</h2>
-            <div class="grid grid-cols-2 md:grid-cols-5 gap-6">
-            <!-- Product 1 -->
-            <div class="product-card">
-                <div class="product-label">NEW</div>
-                <img src="https://placehold.co/300x250" alt="Midnight Bloom" class="product-image">
-                <div class="product-info">
-                <h3 class="product-name">MIDNIGHT BLOOM</h3>
-                <div>
-                    <span class="product-price-old">1,050,000đ</span>
-                    <span class="product-price-new">950,000đ</span>
+            <div class="container mx-auto px-4">
+                <h2 class="text-2xl font-bold text-white text-center bg-green-800 py-4 mb-8 rounded">BỘ HOA TƯƠI ĐẸP</h2>
+                <div class="grid grid-cols-2 md:grid-cols-5 gap-6">
+                    <?php foreach ($products as $product): ?>
+                        <div class="product-card">
+                            <div class="product-label">
+                                <?php
+                                $discount = ($product['price'] - $product['sale']) / $product['price'] * 100;
+                                echo $product['sale'] < $product['price'] ? '-' . round($discount) . '%' : 'NEW';
+                                ?>
+                            </div>
+                            <img src="<?php echo htmlspecialchars($product['image']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>" class="product-image">
+                            <div class="product-info">
+                                <h3 class="product-name"><?php echo htmlspecialchars($product['name']); ?></h3>
+                                <div>
+                                    <span class="product-price-old"><?php echo number_format($product['price'], 0, ',', '.') . 'đ'; ?></span>
+                                    <span class="product-price-new"><?php echo number_format($product['sale'], 0, ',', '.') . 'đ'; ?></span>
+                                </div>
+                                <!-- Add to Cart Form -->
+                                <form method="POST" action="" class="mt-2">
+                                    <input type="hidden" name="pid" value="<?php echo $product['id']; ?>">
+                                    <input type="hidden" name="name" value="<?php echo htmlspecialchars($product['name']); ?>">
+                                    <input type="hidden" name="price" value="<?php echo $product['sale']; ?>">
+                                    <input type="hidden" name="image" value="<?php echo htmlspecialchars($product['image']); ?>">
+                                    <input type="number" name="quantity" value="1" min="1" class="w-16 p-1 border rounded">
+                                    <button type="submit" name="add_to_cart" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600">Add to Cart</button>
+                                </form>
+                                <!-- Add to Wishlist Form -->
+                                <form method="POST" action="" class="mt-2">
+                                    <input type="hidden" name="pid" value="<?php echo $product['id']; ?>">
+                                    <input type="hidden" name="name" value="<?php echo htmlspecialchars($product['name']); ?>">
+                                    <input type="hidden" name="price" value="<?php echo $product['sale']; ?>">
+                                    <input type="hidden" name="image" value="<?php echo htmlspecialchars($product['image']); ?>">
+                                    <button type="submit" name="add_to_wishlist" class="bg-blue-500 text-white px-3 py-1 rounded hover:bg-blue-600">Add to Wishlist</button>
+                                </form>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
                 </div>
-                </div>
+                <!-- View More Button -->
+                <a href="/products" class="view-more-btn">Xem thêm bó hoa</a>
             </div>
-            <!-- Product 2 -->
-            <div class="product-card">
-                <div class="product-label">-17%</div>
-                <img src="https://placehold.co/300x250" alt="Blissful Bouquet" class="product-image">
-                <div class="product-info">
-                <h3 class="product-name">BLISSFUL BOUQUET - BỘ HOA HẠNH PHÚC</h3>
-                <div>
-                    <span class="product-price-old">480,000đ</span>
-                    <span class="product-price-new">400,000đ</span>
-                </div>
-                </div>
-            </div>
-            <!-- Product 3 -->
-            <div class="product-card">
-                <div class="product-label">-21%</div>
-                <img src="https://placehold.co/300x250" alt="Hoa Bó Pink Whispers" class="product-image">
-                <div class="product-info">
-                <h3 class="product-name">HOA BÓ PINK WHISPERS</h3>
-                <div>
-                    <span class="product-price-old">480,000đ</span>
-                    <span class="product-price-new">380,000đ</span>
-                </div>
-                </div>
-            </div>
-            <!-- Product 4 -->
-            <div class="product-card">
-                <div class="product-label">-18%</div>
-                <img src="https://placehold.co/300x250" alt="Hydrangea Muse Bouquet" class="product-image">
-                <div class="product-info">
-                <h3 class="product-name">HYDRANGEA MUSE BOUQUET</h3>
-                <div>
-                    <span class="product-price-old">550,000đ</span>
-                    <span class="product-price-new">450,000đ</span>
-                </div>
-                </div>
-            </div>
-            <!-- Product 5 -->
-            <div class="product-card">
-                <div class="product-label">-13%</div>
-                <img src="https://placehold.co/300x250" alt="Bó Hoa Sinh Nhật Tặng Người Yêu Xinh" class="product-image">
-                <div class="product-info">
-                <h3 class="product-name">BÓ HOA SINH NHẬT TẶNG NGƯỜI YÊU XINH</h3>
-                <div>
-                    <span class="product-price-old">480,000đ</span>
-                    <span class="product-price-new">420,000đ</span>
-                </div>
-                </div>
-            </div>
-            <!-- Product 6 -->
-            <div class="product-card">
-                <div class="product-label">-20%</div>
-                <img src="https://placehold.co/300x250" alt="Bó hoa cầm tự câu Nắng Thơ" class="product-image">
-                <div class="product-info">
-                <h3 class="product-name">BÓ HOA CẦM TỰ CÂU NẮNG THƠ</h3>
-                <div>
-                    <span class="product-price-old">350,000đ</span>
-                    <span class="product-price-new">280,000đ</span>
-                </div>
-                </div>
-            </div>
-            <!-- Product 7 -->
-            <div class="product-card">
-                <div class="product-label">-13%</div>
-                <img src="https://placehold.co/300x250" alt="Bó Hoa Giá Rẻ Cầm Tự Câu Hàn Quốc" class="product-image">
-                <div class="product-info">
-                <h3 class="product-name">BÓ HOA GIÁ RẺ CẦM TỰ CÂU HÀN QUỐC</h3>
-                <div>
-                    <span class="product-price-old">320,000đ</span>
-                    <span class="product-price-new">280,000đ</span>
-                </div>
-                </div>
-            </div>
-            <!-- Product 8 -->
-            <div class="product-card">
-                <div class="product-label">NEW</div>
-                <img src="https://placehold.co/300x250" alt="Hoa Bó Sinh Nhật Amethyst Aura" class="product-image">
-                <div class="product-info">
-                <h3 class="product-name">HOA BÓ SINH NHẬT AMETHYST AURA</h3>
-                <div>
-                    <span class="product-price-old">950,000đ</span>
-                    <span class="product-price-new">850,000đ</span>
-                </div>
-                </div>
-            </div>
-            <!-- Product 9 -->
-            <div class="product-card">
-                <div class="product-label">-5%</div>
-                <img src="https://placehold.co/300x250" alt="Hoa Sinh Nhật Bó Hoa Hồng Shimmer Hạnh" class="product-image">
-                <div class="product-info">
-                <h3 class="product-name">HOA SINH NHẬT BÓ HOA HỒNG SHIMMER HẠNH</h3>
-                <div>
-                    <span class="product-price-old">420,000đ</span>
-                    <span class="product-price-new">400,000đ</span>
-                </div>
-                </div>
-            </div>
-            <!-- Product 10 -->
-            <div class="product-card">
-                <div class="product-label">-14%</div>
-                <img src="https://placehold.co/300x250" alt="Bó Hoa Hồng Love Daily Rose" class="product-image">
-                <div class="product-info">
-                <h3 class="product-name">BÓ HOA HỒNG LOVE DAILY ROSE</h3>
-                <div>
-                    <span class="product-price-old">350,000đ</span>
-                    <span class="product-price-new">300,000đ</span>
-                </div>
-                </div>
-            </div>
-            </div>
-            <!-- View More Button -->
-            <a href="/products" class="view-more-btn">Xem thêm bó hoa</a>
-        </div>
         </section>
 
-        <!-- About Us Section -->
-        <section class="about-section">
-        <div class="container mx-auto px-4">
-            <h2 class="text-3xl font-bold mb-6">About Us</h2>
-            <p class="mb-4">
-            Welcome to Flower Shop, your go-to destination for fresh and beautiful flowers since 2015. We are passionate about bringing nature's finest blooms to your doorstep, whether you're celebrating a special occasion or simply want to brighten someone's day. Our mission is to create stunning floral arrangements that convey your emotions and make every moment memorable.
-            </p>
-            <p class="mb-4">
-            At Flower Shop, we source our flowers from the best local and international growers, ensuring quality and freshness in every bouquet. Our dedicated team of florists works with love and creativity to craft arrangements that suit every taste and style.
-            </p>
-            <p>
-            Visit us at 123 Flower Street, City, Country, or reach out via phone at +123 456 7890 or email at support@flowershop.com. We’re open daily from 7:30 to 21:30, ready to serve you with a smile!
-            </p>
-        </div>
-        </section>
-
-        <!-- Flower Introductions Section -->
+        <!-- Flower Introductions Section (unchanged) -->
         <section class="py-12 bg-gray-100">
-        <div class="container mx-auto px-4">
-            <h2 class="text-2xl font-bold text-white text-center bg-green-800 py-4 mb-8 rounded">Our Favorite Flowers</h2>
-            <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
-            <!-- Flower 1: Rose -->
-            <div class="flower-card">
-                <img src="https://via.placeholder.com/300x200?text=Rose" alt="Rose" class="flower-image">
-                <div class="flower-info">
-                <h3 class="flower-name">Rose</h3>
-                <p class="flower-meaning">Symbol of Love and Appreciation</p>
-                <p class="flower-description">Roses are timeless flowers, often associated with love and passion. Available in various colors, each shade carries a unique meaning, making them perfect for any occasion.</p>
+            <div class="container mx-auto px-4">
+                <h2 class="text-2xl font-bold text-white text-center bg-green-800 py-4 mb-8 rounded">Our Favorite Flowers</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                    <div class="flower-card">
+                        <img src="https://via.placeholder.com/300x200?text=Rose" alt="Rose" class="flower-image">
+                        <div class="flower-info">
+                            <h3 class="flower-name">Rose</h3>
+                            <p class="flower-meaning">Symbol of Love and Appreciation</p>
+                            <p class="flower-description">Roses are timeless flowers, often associated with love and passion. Available in various colors, each shade carries a unique meaning, making them perfect for any occasion.</p>
+                        </div>
+                    </div>
+                    <div class="flower-card">
+                        <img src="https://via.placeholder.com/300x200?text=Daisy" alt="Daisy" class="flower-image">
+                        <div class="flower-info">
+                            <h3 class="flower-name">Daisy</h3>
+                            <p class="flower-meaning">Symbol of Innocence and Purity</p>
+                            <p class="flower-description">Daisies are simple yet charming flowers, often used to represent new beginnings. Their bright white petals and sunny centers bring a sense of joy and simplicity.</p>
+                        </div>
+                    </div>
+                    <div class="flower-card">
+                        <img src="https://via.placeholder.com/300x200?text=Sunflower" alt="Sunflower" class="flower-image">
+                        <div class="flower-info">
+                            <h3 class="flower-name">Sunflower</h3>
+                            <p class="flower-meaning">Symbol of Happiness and Vitality</p>
+                            <p class="flower-description">Sunflowers, with their large, vibrant blooms, are known for their ability to turn toward the sun. They represent positivity, strength, and admiration.</p>
+                        </div>
+                    </div>
+                    <div class="flower-card">
+                        <img src="https://via.placeholder.com/300x200?text=Orchid" alt="Orchid" class="flower-image">
+                        <div class="flower-info">
+                            <h3 class="flower-name">Orchid</h3>
+                            <p class="flower-meaning">Symbol of Elegance and Beauty</p>
+                            <p class="flower-description">Orchids are exotic and delicate flowers, often associated with luxury and refinement. They come in a variety of colors and are perfect for sophisticated arrangements.</p>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <!-- Flower 2: Daisy -->
-            <div class="flower-card">
-                <img src="https://via.placeholder.com/300x200?text=Daisy" alt="Daisy" class="flower-image">
-                <div class="flower-info">
-                <h3 class="flower-name">Daisy</h3>
-                <p class="flower-meaning">Symbol of Innocence and Purity</p>
-                <p class="flower-description">Daisies are simple yet charming flowers, often used to represent new beginnings. Their bright white petals and sunny centers bring a sense of joy and simplicity.</p>
-                </div>
-            </div>
-            <!-- Flower 3: Sunflower -->
-            <div class="flower-card">
-                <img src="https://via.placeholder.com/300x200?text=Sunflower" alt="Sunflower" class="flower-image">
-                <div class="flower-info">
-                <h3 class="flower-name">Sunflower</h3>
-                <p class="flower-meaning">Symbol of Happiness and Vitality</p>
-                <p class="flower-description">Sunflowers, with their large, vibrant blooms, are known for their ability to turn toward the sun. They represent positivity, strength, and admiration.</p>
-                </div>
-            </div>
-            <!-- Flower 4: Orchid -->
-            <div class="flower-card">
-                <img src="https://via.placeholder.com/300x200?text=Orchid" alt="Orchid" class="flower-image">
-                <div class="flower-info">
-                <h3 class="flower-name">Orchid</h3>
-                <p class="flower-meaning">Symbol of Elegance and Beauty</p>
-                <p class="flower-description">Orchids are exotic and delicate flowers, often associated with luxury and refinement. They come in a variety of colors and are perfect for sophisticated arrangements.</p>
-                </div>
-            </div>
-            </div>
-        </div>
         </section>
 
-        <!-- Service Section -->
+        <!-- Service Section (unchanged) -->
         <section class="service-section">
-        <div class="container mx-auto px-4">
-            <h2 class="text-2xl font-bold">Shop Hoa Tươi Online Phúc Vũ:</h2>
-            <div class="service-grid mt-6">
-            <!-- Service 1: Giao Hoa Nhanh -->
-            <div class="service-item">
-                <svg class="service-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                </svg>
-                <h3 class="service-title">Giao Hoa Nhanh</h3>
-                <p class="service-description">Trong 90 - 120 phút</p>
+            <div class="container mx-auto px-4">
+                <h2 class="text-2xl font-bold">Shop Hoa Tươi Online Phúc Vũ:</h2>
+                <div class="service-grid mt-6">
+                    <div class="service-item">
+                        <svg class="service-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+                        </svg>
+                        <h3 class="service-title">Giao Hoa Nhanh</h3>
+                        <p class="service-description">Trong 90 - 120 phút</p>
+                    </div>
+                    <div class="service-item">
+                        <svg class="service-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01m-.01 4h.01"></path>
+                        </svg>
+                        <h3 class="service-title">Miễn Phí Giao Hàng</h3>
+                        <p class="service-description">(>200K - Quận 1,3,5)</p>
+                    </div>
+                    <div class="service-item">
+                        <svg class="service-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                        </svg>
+                        <h3 class="service-title">Giao Hoa Tận Nơi</h3>
+                        <p class="service-description">Đảm Bảo Hoa Tươi</p>
+                    </div>
+                    <div class="service-item">
+                        <svg class="service-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path>
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3a4 4 0 100 8 4 4 0 000-8z"></path>
+                        </svg>
+                        <h3 class="service-title">Hoa Giao Đúng Mẫu</h3>
+                        <p class="service-description">Đúng Tone Màu</p>
+                    </div>
+                </div>
             </div>
-            <!-- Service 2: Miễn Phí Giao Hàng -->
-            <div class="service-item">
-                <svg class="service-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01m-.01 4h.01"></path>
-                </svg>
-                <h3 class="service-title">Miễn Phí Giao Hàng</h3>
-                <p class="service-description">(>200K - Quận 1,3,5)</p>
-            </div>
-            <!-- Service 3: Giao Hoa Tận Nơi -->
-            <div class="service-item">
-                <svg class="service-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-                </svg>
-                <h3 class="service-title">Giao Hoa Tận Nơi</h3>
-                <p class="service-description">Đảm Bảo Hoa Tươi</p>
-            </div>
-            <!-- Service 4: Hoa Giao Đúng Mẫu -->
-            <div class="service-item">
-                <svg class="service-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path>
-                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3a4 4 0 100 8 4 4 0 000-8z"></path>
-                </svg>
-                <h3 class="service-title">Hoa Giao Đúng Mẫu</h3>
-                <p class="service-description">Đúng Tone Màu</p>
-            </div>
-            </div>
-        </div>
         </section>
     </main>
 
@@ -420,7 +360,7 @@ if(isset($_POST['logout'])){
                 <h3 class="text-lg font-bold mb-4">Quick Links</h3>
                 <ul class="space-y-2">
                     <li><a href="/products" class="hover:text-green-300">Products</a></li>
-                    <li><a href="logout.php" class="hover:text-green-300">Logout</a></li>
+                    <li><form method="POST" action=""><button type="submit" name="logout" class="hover:text-green-300">Logout</button></form></li>
                 </ul>
             </div>
             <div>
