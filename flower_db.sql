@@ -3,13 +3,14 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: Apr 25, 2025 at 04:49 AM
+-- Generation Time: May 06, 2025 at 10:51 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
 SET SQL_MODE = "NO_AUTO_VALUE_ON_ZERO";
 START TRANSACTION;
 SET time_zone = "+00:00";
+
 
 /*!40101 SET @OLD_CHARACTER_SET_CLIENT=@@CHARACTER_SET_CLIENT */;
 /*!40101 SET @OLD_CHARACTER_SET_RESULTS=@@CHARACTER_SET_RESULTS */;
@@ -28,12 +29,14 @@ SET time_zone = "+00:00";
 
 CREATE TABLE `cart` (
   `id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `pid` int(11) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  `pid` bigint(20) NOT NULL,
   `name` varchar(255) NOT NULL,
   `price` decimal(10,2) NOT NULL,
   `quantity` int(11) NOT NULL,
-  `image` varchar(255) NOT NULL
+  `image` varchar(255) NOT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -44,11 +47,12 @@ CREATE TABLE `cart` (
 
 CREATE TABLE `message` (
   `id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
   `name` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
   `number` varchar(30) NOT NULL,
-  `message` text NOT NULL
+  `message` text NOT NULL,
+  `created_at` datetime DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -59,16 +63,18 @@ CREATE TABLE `message` (
 
 CREATE TABLE `orders` (
   `id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
   `name` varchar(255) NOT NULL,
   `number` varchar(30) NOT NULL,
   `email` varchar(255) NOT NULL,
   `method` varchar(255) NOT NULL,
   `address` varchar(255) NOT NULL,
-  `total_products` varchar(255) NOT NULL,
+  `total_products` text NOT NULL,
   `total_price` decimal(10,2) NOT NULL,
-  `placed_on` datetime NOT NULL,
-  `payment_status` varchar(255) NOT NULL DEFAULT 'pending'
+  `placed_on` datetime NOT NULL DEFAULT current_timestamp(),
+  `payment_status` enum('pending','paid','failed') NOT NULL DEFAULT 'pending',
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -76,15 +82,15 @@ CREATE TABLE `orders` (
 --
 DELIMITER $$
 CREATE TRIGGER `after_order_insert_clear_cart` AFTER INSERT ON `orders` FOR EACH ROW BEGIN
-    DELETE FROM `cart` WHERE `user_id` = NEW.`user_id`;
+    DELETE FROM cart WHERE user_id = NEW.user_id;
 END
 $$
 DELIMITER ;
 DELIMITER $$
 CREATE TRIGGER `after_order_status_update` AFTER UPDATE ON `orders` FOR EACH ROW BEGIN
-    IF OLD.`payment_status` != NEW.`payment_status` THEN
-        INSERT INTO `order_status_log` (`order_id`, `old_status`, `new_status`, `changed_at`)
-        VALUES (NEW.`id`, OLD.`payment_status`, NEW.`payment_status`, NOW());
+    IF OLD.payment_status != NEW.payment_status THEN
+        INSERT INTO order_status_log (order_id, old_status, new_status, changed_at)
+        VALUES (NEW.id, OLD.payment_status, NEW.payment_status, NOW());
     END IF;
 END
 $$
@@ -99,8 +105,8 @@ DELIMITER ;
 CREATE TABLE `order_status_log` (
   `log_id` int(11) NOT NULL,
   `order_id` int(11) NOT NULL,
-  `old_status` varchar(255) DEFAULT NULL,
-  `new_status` varchar(255) NOT NULL,
+  `old_status` enum('pending','paid','failed') DEFAULT NULL,
+  `new_status` enum('pending','paid','failed') NOT NULL,
   `changed_at` datetime NOT NULL DEFAULT current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
@@ -111,14 +117,16 @@ CREATE TABLE `order_status_log` (
 --
 
 CREATE TABLE `products` (
-  `id` int(11) NOT NULL,
+  `id` bigint(20) NOT NULL,
   `name` varchar(255) NOT NULL,
   `price` decimal(10,2) NOT NULL,
-  `sale` decimal(10,2) NOT NULL,
+  `sale` decimal(10,2) NOT NULL DEFAULT 0.00,
   `product_detail` text NOT NULL,
   `image` varchar(255) NOT NULL,
   `origin` varchar(255) DEFAULT NULL,
-  `type` enum('birthday','wedding','bouquet','condolence','basket','other') DEFAULT NULL
+  `type` enum('birthday','wedding','bouquet','condolence','basket','other') DEFAULT 'other',
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 -- --------------------------------------------------------
@@ -128,21 +136,23 @@ CREATE TABLE `products` (
 --
 
 CREATE TABLE `users` (
-  `id` int(11) NOT NULL,
+  `id` bigint(20) NOT NULL,
   `name` varchar(255) NOT NULL,
   `email` varchar(255) NOT NULL,
   `password` varchar(255) NOT NULL,
-  `status` varchar(255) NOT NULL DEFAULT 'Offline',
-  `user_type` varchar(255) NOT NULL DEFAULT 'user'
+  `status` enum('Online','Offline') NOT NULL DEFAULT 'Offline',
+  `user_type` enum('user','admin') NOT NULL DEFAULT 'user',
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `email`, `password`, `status`, `user_type`) VALUES
-(7, 'Duong', 'username@gmail.com', '$2y$10$a1Y4h8HMlSPK6uYM0Myc4u3zCjrqY25IFDAo8atl5nM6IWcUv9h.i', 'Offline', 'user'),
-(9, 'admin', 'admin@gmail.com', '$2y$10$n8Gk32v7SkVooSkkJeY4Te5fKy7RO9bVk2Sa6809ph8jRzCIp.A6O', 'Online', 'admin');
+INSERT INTO `users` (`id`, `name`, `email`, `password`, `status`, `user_type`, `created_at`, `updated_at`) VALUES
+(2804250001, 'Duong', 'username@gmail.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Offline', 'user', '2025-04-28 16:57:57', '2025-04-28 17:04:21'),
+(2804250002, 'admin', 'admin@gmail.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Offline', 'admin', '2025-04-28 17:03:06', '2025-04-28 17:04:01');
 
 -- --------------------------------------------------------
 
@@ -152,11 +162,13 @@ INSERT INTO `users` (`id`, `name`, `email`, `password`, `status`, `user_type`) V
 
 CREATE TABLE `wishlist` (
   `id` int(11) NOT NULL,
-  `user_id` int(11) NOT NULL,
-  `pid` int(11) NOT NULL,
+  `user_id` bigint(20) NOT NULL,
+  `pid` bigint(20) NOT NULL,
   `name` varchar(255) NOT NULL,
   `price` decimal(10,2) NOT NULL,
-  `image` varchar(255) NOT NULL
+  `image` varchar(255) NOT NULL,
+  `created_at` datetime DEFAULT current_timestamp(),
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
@@ -168,7 +180,7 @@ CREATE TABLE `wishlist` (
 --
 ALTER TABLE `cart`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `user_id` (`user_id`),
+  ADD UNIQUE KEY `user_id` (`user_id`,`pid`),
   ADD KEY `pid` (`pid`);
 
 --
@@ -210,7 +222,7 @@ ALTER TABLE `users`
 --
 ALTER TABLE `wishlist`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `user_id` (`user_id`),
+  ADD UNIQUE KEY `user_id` (`user_id`,`pid`),
   ADD KEY `pid` (`pid`);
 
 --
@@ -233,7 +245,7 @@ ALTER TABLE `message`
 -- AUTO_INCREMENT for table `orders`
 --
 ALTER TABLE `orders`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `order_status_log`
@@ -245,13 +257,7 @@ ALTER TABLE `order_status_log`
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=16;
-
---
--- AUTO_INCREMENT for table `users`
---
-ALTER TABLE `users`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=11;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT;
 
 --
 -- AUTO_INCREMENT for table `wishlist`
@@ -267,34 +273,33 @@ ALTER TABLE `wishlist`
 -- Constraints for table `cart`
 --
 ALTER TABLE `cart`
-  ADD CONSTRAINT `cart_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `cart_ibfk_2` FOREIGN KEY (`pid`) REFERENCES `products` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `cart_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `cart_ibfk_2` FOREIGN KEY (`pid`) REFERENCES `products` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `message`
 --
 ALTER TABLE `message`
-  ADD CONSTRAINT `message_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `message_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `orders`
 --
 ALTER TABLE `orders`
-  ADD CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `order_status_log`
 --
 ALTER TABLE `order_status_log`
-  ADD CONSTRAINT `order_status_log_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE;
+  ADD CONSTRAINT `order_status_log_ibfk_1` FOREIGN KEY (`order_id`) REFERENCES `orders` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `wishlist`
 --
 ALTER TABLE `wishlist`
-  ADD CONSTRAINT `wishlist_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE,
-  ADD CONSTRAINT `wishlist_ibfk_2` FOREIGN KEY (`pid`) REFERENCES `products` (`id`) ON DELETE CASCADE;
-
+  ADD CONSTRAINT `wishlist_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `wishlist_ibfk_2` FOREIGN KEY (`pid`) REFERENCES `products` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
