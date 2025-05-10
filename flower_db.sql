@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 06, 2025 at 03:23 PM
+-- Generation Time: May 10, 2025 at 12:58 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -38,6 +38,17 @@ CREATE TABLE `cart` (
   `created_at` datetime DEFAULT current_timestamp(),
   `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
+
+--
+-- Dumping data for table `cart`
+--
+
+INSERT INTO `cart` (`id`, `user_id`, `pid`, `name`, `price`, `quantity`, `image`, `created_at`, `updated_at`) VALUES
+(1, 605250001, 11, 'White Orchid Wreath', 85.00, 1, '11.jpg', '2025-05-10 10:00:00', '2025-05-10 14:47:07'),
+(2, 605250001, 15, 'Pink Rose Gift Bag', 65.00, 2, '15.jpg', '2025-05-10 10:05:00', '2025-05-10 14:47:14'),
+(3, 605250002, 21, 'White Lily Bridal Bouquet', 90.00, 1, '21.jpg', '2025-05-10 10:10:00', '2025-05-10 10:10:00'),
+(4, 605250002, 31, 'Red Rose Bouquet', 65.00, 3, '31.jpg', '2025-05-10 10:15:00', '2025-05-10 10:15:00'),
+(18, 605250001, 8, 'Pink Celebration Basket', 8.00, 1, '8.jpg', '2025-05-10 17:41:48', '2025-05-10 17:41:48');
 
 -- --------------------------------------------------------
 
@@ -151,10 +162,40 @@ CREATE TABLE `products` (
 --
 
 INSERT INTO `products` (`id`, `name`, `price`, `sale`, `product_detail`, `image`, `origin`, `type`, `created_at`, `updated_at`) VALUES
-(1, 'Red Roses', 25.00, 5.00, 'A classic bouquet of red roses', 'red_roses.jpg', 'Vietnam', 'bouquet', '2025-05-06 13:05:59', '2025-05-06 13:05:59'),
-(2, 'Wedding Flowers', 100.00, 15.00, 'Elegant wedding bouquet', 'wedding_flowers.jpg', 'France', 'wedding', '2025-05-06 13:05:59', '2025-05-06 13:05:59'),
-(3, 'Sunflower Basket', 40.00, 10.00, 'A sunny basket of sunflowers', 'sunflowers.jpg', 'Thailand', 'basket', '2025-05-06 13:05:59', '2025-05-06 13:05:59'),
-(4, 'Condolence Flowers', 50.00, 0.00, 'White lilies for condolences', 'condolence.jpg', 'Vietnam', 'condolence', '2025-05-06 13:05:59', '2025-05-06 13:05:59');
+(1, 'Lavender Fan Arrangement', 95.00, 10.00, 'Artistic flower basket in purple, yellow, and green tones, featuring fan-shaped decorations.', '1.jpg', 'Vietnam', 'other', '2025-05-10 13:54:32', '2025-05-10 13:57:40'),
+(2, 'Succulent Lady Planter', 72.00, 12.00, 'Succulent arrangement in a charming lady-head ceramic pot. Great for desks and gifts.', '2.jpg', 'Thailand', 'other', '2025-05-10 13:54:32', '2025-05-10 13:58:35'),
+(3, 'Blue Delight Bouquet', 79.00, 0.00, 'Elegant bouquet in soft blue and cream tones, decorated with delicate white butterflies.', '3.jpg', 'Vietnam', 'basket', '2025-05-10 13:54:32', '2025-05-10 14:06:01'),
+(4, 'Peach Garden in Box', 82.00, 14.00, 'Transparent floral box with peach roses, daisies, and mixed blooms. Natural and stylish.', '4.jpg', 'Russia', 'other', '2025-05-10 13:54:32', '2025-05-10 17:17:19'),
+(5, 'Teddy Pink Gift Box', 86.00, 25.00, 'Pastel pink flower box with a teddy bear, perfect for birthdays and romantic gifts.', '5.jpg', 'Myanma', 'birthday', '2025-05-10 13:54:32', '2025-05-10 17:17:27'),
+(6, 'Succulent Harmony Box', 80.00, 8.00, 'Assorted succulents arranged in a modern clear box. Adds freshness to any space.', '6.jpg', 'Vietnam', 'other', '2025-05-10 13:54:32', '2025-05-10 17:17:34'),
+(7, 'Yellow Sunshine Box', 87.00, 0.00, 'Bright yellow and white flowers mixed with succulents in a cheerful clear box.', '7.jpg', 'Vietnam', 'wedding', '2025-05-10 13:54:32', '2025-05-10 17:17:45'),
+(8, 'Pink Celebration Basket', 89.00, 8.00, 'Soft pink flower basket perfect for celebrations or birthdays.', '8.jpg', 'China', 'basket', '2025-05-10 13:54:32', '2025-05-10 17:17:51'),
+(9, 'Pastel Romance Basket', 86.00, 18.00, 'Romantic flower basket in pastel pink and lavender tones, ideal for heartfelt gifts.', '9.jpg', 'Vietnam', 'basket', '2025-05-10 13:54:32', '2025-05-10 17:17:58'),
+(10, 'Blue-Yellow Luxury Bouquet', 98.00, 11.00, 'Luxurious bouquet of blue and cream blooms, elegant and refined for special occasions.', '10.jpg', 'Paraguay', 'basket', '2025-05-10 13:54:32', '2025-05-10 17:18:04'),
+(11, 'White Orchid Wreath', 85.00, 0.00, 'Elegant wreath with white orchids and roses, perfect for condolences.', '11.jpg', 'Thailand', 'wedding', '2025-05-10 10:00:00', '2025-05-10 14:11:56'),
+(12, 'Yellow Daisy Wreath', 75.00, 0.00, 'Bright wreath with yellow daisies and white chrysanthemums for memorial services.', '12.jpg', 'Netherlands', 'basket', '2025-05-10 10:00:00', '2025-05-10 14:07:03'),
+(13, 'Tropical Orange Basket', 95.00, 12.00, 'Vibrant basket with orange roses, orchids, and tropical flowers for celebrations.', '13.jpg', 'Brazil', 'basket', '2025-05-10 10:00:00', '2025-05-10 14:06:30'),
+(14, 'Yellow Rose Wreath', 80.00, 0.00, 'Classic wreath with yellow roses and white blooms, ideal for funerals.', '14.jpg', 'Colombia', 'condolence', '2025-05-10 10:00:00', '2025-05-10 14:06:35'),
+(15, 'Pink Rose Gift Bag', 65.00, 0.00, 'Charming pink bag bouquet with roses and carnations, great for birthdays.', '15.jpg', 'France', 'condolence', '2025-05-10 10:00:00', '2025-05-10 14:08:36'),
+(16, 'White Daisy Bouquet', 45.00, 0.00, 'Simple bouquet of white daisies wrapped in kraft paper, perfect for any occasion.', '16.jpg', 'Germany', 'condolence', '2025-05-10 10:00:00', '2025-05-10 14:08:49'),
+(17, 'White Chrysanthemum Stand', 90.00, 17.00, 'Elegant stand arrangement with white chrysanthemums and green leaves for memorials.', '17.jpg', 'Japan', 'condolence', '2025-05-10 10:00:00', '2025-05-10 14:09:00'),
+(18, 'Yellow Mixed Wreath', 85.00, 0.00, 'Wreath with yellow roses, daisies, and white flowers, suitable for funerals.', '18.jpg', 'Ecuador', 'condolence', '2025-05-10 10:00:00', '2025-05-10 14:09:11'),
+(19, 'Purple Rose Gift Bag', 70.00, 20.00, 'Stylish purple bag bouquet with roses and succulents, ideal for gifting.', '19.jpg', 'Australia', 'condolence', '2025-05-10 10:00:00', '2025-05-10 14:09:23'),
+(20, 'Pink Chrysanthemum Wreath', 80.00, 0.00, 'Soft pink and white chrysanthemum wreath with black ribbons for condolences.', '20.jpg', 'South Africa', 'bouquet', '2025-05-10 10:00:00', '2025-05-10 14:09:37'),
+(21, 'White Lily Bridal Bouquet', 90.00, 0.00, 'Elegant bridal bouquet with white lilies, perfect for weddings.', '21.jpg', 'Italy', 'bouquet', '2025-05-10 10:00:00', '2025-05-10 14:22:44'),
+(22, 'Sunflower Kraft Bouquet', 55.00, 0.00, 'Rustic bouquet with a single sunflower and dark foliage, great for casual gifts.', '22.jpg', 'Spain', 'bouquet', '2025-05-10 10:00:00', '2025-05-10 10:00:00'),
+(23, 'Blue Chrysanthemum Bouquet', 70.00, 14.00, 'Vibrant bouquet with blue chrysanthemums and white flowers for celebrations.', '23.jpg', 'China', 'wedding', '2025-05-10 10:00:00', '2025-05-10 14:25:23'),
+(24, 'Pink Rose Handheld Bouquet', 60.00, 0.00, 'Delicate bouquet with pink roses and eucalyptus, ideal for birthdays.', '24.jpg', 'Kenya', 'birthday', '2025-05-10 10:00:00', '2025-05-10 10:00:00'),
+(25, 'White Rose Wedding Bouquet', 85.00, 0.00, 'Classic wedding bouquet with white roses and green accents.', '25.jpg', 'Canada', 'wedding', '2025-05-10 10:00:00', '2025-05-10 10:00:00'),
+(26, 'White Carnation Bridal Bouquet', 75.00, 7.00, 'Simple bridal bouquet with white carnations and greenery.', '26.jpg', 'Mexico', 'wedding', '2025-05-10 10:00:00', '2025-05-10 14:25:15'),
+(27, 'Mixed Rose Stand Arrangement', 95.00, 0.00, 'Colorful stand with roses in pink, orange, and white for events.', '27.jpg', 'India', 'other', '2025-05-10 10:00:00', '2025-05-10 14:43:41'),
+(28, 'White Orchid Wedding Cascade', 100.00, 20.00, 'Luxurious cascading bouquet with white orchids for weddings.', '28.jpg', 'Malaysia', 'wedding', '2025-05-10 10:00:00', '2025-05-10 14:25:10'),
+(29, 'Pink Daisy Large Bouquet', 80.00, 15.00, 'Large bouquet with pink daisies and roses, perfect for gifting.', '29.jpg', 'Argentina', 'bouquet', '2025-05-10 10:00:00', '2025-05-10 14:25:03'),
+(30, 'Sunflower Small Bouquet', 50.00, 0.00, 'Charming small bouquet with a sunflower and purple accents.', '30.jpg', 'Turkey', 'bouquet', '2025-05-10 10:00:00', '2025-05-10 10:00:00'),
+(31, 'Red Rose Bouquet', 65.00, 0.00, 'Classic bouquet of vibrant red roses, perfect for romantic occasions.', '31.jpg', 'Peru', 'bouquet', '2025-05-10 10:00:00', '2025-05-10 10:00:00'),
+(32, 'Blue Rose Bouquet', 70.00, 0.00, 'Unique bouquet with blue roses and babyâ€™s breath, ideal for special gifts.', '32.jpg', 'New Zealand', 'bouquet', '2025-05-10 10:00:00', '2025-05-10 10:00:00'),
+(33, 'Pink Mixed Flower Bouquet', 75.00, 0.00, 'Charming bouquet with pink roses, daisies, and eucalyptus for celebrations.', '33.jpg', 'Vietnam', 'birthday', '2025-05-10 10:00:00', '2025-05-10 10:00:00'),
+(34, 'White Lily Vase Arrangement', 60.00, 0.00, 'Elegant vase arrangement with white lilies, suitable for any occasion.', '34.jpg', 'Greece', 'other', '2025-05-10 10:00:00', '2025-05-10 14:43:34');
 
 -- --------------------------------------------------------
 
@@ -179,8 +220,10 @@ CREATE TABLE `reviews` (
 --
 
 INSERT INTO `reviews` (`id`, `user_id`, `product_id`, `name`, `email`, `number`, `message`, `rating`, `created_at`) VALUES
-(1, 605250001, 1, 'John Doe', 'john@example.com', '0123456789', 'Beautiful flowers, very fresh!', 5, '2025-05-06 13:05:59'),
-(2, 605250002, 3, 'Jane Smith', 'jane@example.com', '0987654321', 'Bright and cheerful basket, loved it!', 4, '2025-05-06 13:05:59');
+(1, 605250001, 11, 'John Doe', 'john@example.com', '123-456-7890', 'The wreath was beautiful and perfect for the occasion.', 5, '2025-05-10 12:00:00'),
+(2, 605250001, 15, 'John Doe', 'john@example.com', '123-456-7890', 'Loved the pink roses, great for gifting!', 4, '2025-05-10 12:05:00'),
+(3, 605250002, 21, 'Jane Smith', 'jane@example.com', '987-654-3210', 'Stunning bridal bouquet, made the day special.', 5, '2025-05-10 12:10:00'),
+(4, 605250002, 31, 'Jane Smith', 'jane@example.com', '987-654-3210', 'Red roses were vibrant, but delivery was a bit late.', 3, '2025-05-10 12:15:00');
 
 -- --------------------------------------------------------
 
@@ -201,8 +244,16 @@ CREATE TABLE `review_replies` (
 --
 
 INSERT INTO `review_replies` (`id`, `review_id`, `admin_id`, `reply`, `created_at`) VALUES
-(1, 1, 605250003, 'Thank you for your positive feedback!', '2025-05-06 13:05:59'),
-(2, 2, 605250003, 'We appreciate your review, thank you!', '2025-05-06 13:05:59');
+(3, 4, 605250003, 'Thank you for your kind words! Weâ€™re glad you liked the wreath.', '2025-05-10 14:54:03'),
+(4, 4, 605250003, 'Thank you for your kind words! Weâ€™re glad you liked the wreath.', '2025-05-10 14:54:11'),
+(5, 1, 605250003, 'Thank you for your kind words! Weâ€™re glad you liked the wreath.', '2025-05-10 12:05:00'),
+(6, 2, 605250003, 'We appreciate your feedback! Happy you enjoyed the roses.', '2025-05-10 12:10:00'),
+(7, 3, 605250003, 'Thank you! Weâ€™re honored to be part of your special day.', '2025-05-10 12:15:00'),
+(8, 4, 605250003, 'Sorry for the delay, weâ€™ll work on improving our delivery. Thanks for the review!', '2025-05-10 12:20:00'),
+(9, 1, 605250003, 'Oh! Thank you for your all respond for us!', '2025-05-10 15:02:05'),
+(10, 2, 605250003, 'Oh! Love for respond so cute for you!', '2025-05-10 15:05:00'),
+(11, 3, 605250003, 'Thank! See you later to soon!', '2025-05-10 15:06:40'),
+(12, 3, 605250003, 'Thank for all!', '2025-05-10 15:07:26');
 
 -- --------------------------------------------------------
 
@@ -226,9 +277,9 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `name`, `email`, `password`, `status`, `user_type`, `created_at`, `updated_at`) VALUES
-(605250001, 'John Doe', 'john@example.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Online', 'user', '2025-05-06 13:05:59', '2025-05-06 20:09:46'),
+(605250001, 'John Doe', 'john@example.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Online', 'user', '2025-05-06 13:05:59', '2025-05-10 17:49:58'),
 (605250002, 'Jane Smith', 'jane@example.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Offline', 'user', '2025-05-06 13:05:59', '2025-05-06 20:09:51'),
-(605250003, 'Admin User', 'admin@example.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Online', 'admin', '2025-05-06 13:05:59', '2025-05-06 20:22:23');
+(605250003, 'Admin User', 'admin@example.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Offline', 'admin', '2025-05-06 13:05:59', '2025-05-10 15:55:39');
 
 --
 -- Triggers `users`
@@ -248,31 +299,6 @@ CREATE TRIGGER `before_insert_user_id` BEFORE INSERT ON `users` FOR EACH ROW BEG
 END
 $$
 DELIMITER ;
-
--- --------------------------------------------------------
-
---
--- Table structure for table `wishlist`
---
-
-CREATE TABLE `wishlist` (
-  `id` int(11) NOT NULL,
-  `user_id` bigint(20) NOT NULL,
-  `pid` bigint(20) NOT NULL,
-  `name` varchar(255) NOT NULL,
-  `price` decimal(10,2) NOT NULL,
-  `image` varchar(255) NOT NULL,
-  `created_at` datetime DEFAULT current_timestamp(),
-  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
-
---
--- Dumping data for table `wishlist`
---
-
-INSERT INTO `wishlist` (`id`, `user_id`, `pid`, `name`, `price`, `image`, `created_at`, `updated_at`) VALUES
-(1, 605250001, 3, 'Sunflower Basket', 40.00, 'sunflowers.jpg', '2025-05-06 13:05:59', '2025-05-06 13:05:59'),
-(2, 605250002, 1, 'Red Roses', 25.00, 'red_roses.jpg', '2025-05-06 13:05:59', '2025-05-06 13:05:59');
 
 --
 -- Indexes for dumped tables
@@ -330,14 +356,6 @@ ALTER TABLE `users`
   ADD UNIQUE KEY `email` (`email`);
 
 --
--- Indexes for table `wishlist`
---
-ALTER TABLE `wishlist`
-  ADD PRIMARY KEY (`id`),
-  ADD UNIQUE KEY `user_id` (`user_id`,`pid`),
-  ADD KEY `pid` (`pid`);
-
---
 -- AUTO_INCREMENT for dumped tables
 --
 
@@ -345,7 +363,7 @@ ALTER TABLE `wishlist`
 -- AUTO_INCREMENT for table `cart`
 --
 ALTER TABLE `cart`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=4;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
 
 --
 -- AUTO_INCREMENT for table `order_status_log`
@@ -357,25 +375,19 @@ ALTER TABLE `order_status_log`
 -- AUTO_INCREMENT for table `products`
 --
 ALTER TABLE `products`
-  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
+  MODIFY `id` bigint(20) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=35;
 
 --
 -- AUTO_INCREMENT for table `reviews`
 --
 ALTER TABLE `reviews`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `review_replies`
 --
 ALTER TABLE `review_replies`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
-
---
--- AUTO_INCREMENT for table `wishlist`
---
-ALTER TABLE `wishlist`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=3;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=13;
 
 --
 -- Constraints for dumped tables
@@ -413,13 +425,6 @@ ALTER TABLE `reviews`
 ALTER TABLE `review_replies`
   ADD CONSTRAINT `review_replies_ibfk_1` FOREIGN KEY (`review_id`) REFERENCES `reviews` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
   ADD CONSTRAINT `review_replies_ibfk_2` FOREIGN KEY (`admin_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
-
---
--- Constraints for table `wishlist`
---
-ALTER TABLE `wishlist`
-  ADD CONSTRAINT `wishlist_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
-  ADD CONSTRAINT `wishlist_ibfk_2` FOREIGN KEY (`pid`) REFERENCES `products` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 COMMIT;
 
 /*!40101 SET CHARACTER_SET_CLIENT=@OLD_CHARACTER_SET_CLIENT */;
