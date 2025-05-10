@@ -380,7 +380,7 @@ $products = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
         </div>
         <!-- Copyright -->
         <div class="border-t border-green-700 mt-8 pt-4 text-center">
-            <p>© 2025 Flower Shop. All rights reserved.</p>
+            <p>© 2025 Flora & Life. All rights reserved.</p>
         </div>
     </footer>
     <script src="script.js"></script>
