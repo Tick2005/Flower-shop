@@ -153,13 +153,6 @@ unset($_SESSION['message']);
         <main class="main-content">
             <section class="dashboard">
                 <h1>Admin Dashboard</h1>
-                <?php
-                if (!empty($message)) {
-                    foreach ($message as $msg) {
-                        echo '<div class="message">' . htmlspecialchars($msg) . '</div>';
-                    }
-                }
-                ?>
                 <div class="box-container">
                     <!-- Pending Orders -->
                     <div class="box">
@@ -274,7 +267,7 @@ unset($_SESSION['message']);
                     <!-- Messages -->
                     <div class="box">
                         <?php
-                        $stmt = $conn->prepare("SELECT COUNT(id) as count FROM message");
+                        $stmt = $conn->prepare("SELECT COUNT(id) as count FROM reviews");
                         $stmt->execute();
                         $message_count = $stmt->get_result()->fetch_assoc()['count'];
                         ?>
