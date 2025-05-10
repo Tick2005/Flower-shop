@@ -90,7 +90,8 @@ if (isset($_GET['delete']) && isset($_GET['csrf_token']) && $_GET['csrf_token'] 
         }
         $stmt->close();
     }
-    header('Location: admin_reviews.php?page=' . $page . ($search ? '&search=' . urlencode($search) : ''));
+    $_SESSION['message'] = $message; // Store message in session for redirection
+    header('Location: admin_message.php');
     exit();
 }
 
@@ -105,7 +106,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_id'], $_POST['
             if ($stmt->execute()) {
                 $message[] = 'Reply posted successfully.';
             } else {
-                $message[] = 'Failed to post reply.';
+                $message[] = 'Failed to post reply. Please try again.';
+                error_log("Failed to execute reply insert for review ID $review_id");
             }
         } catch (Exception $e) {
             $message[] = 'Error posting reply: ' . htmlspecialchars($e->getMessage());
@@ -115,7 +117,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_id'], $_POST['
     } else {
         $message[] = 'Invalid review ID or empty reply.';
     }
-    header('Location: admin_reviews.php?page=' . $page . ($search ? '&search=' . urlencode($search) : ''));
+    $_SESSION['message'] = $message; // Store message in session for redirection
+    header('Location: admin_message.php');
     exit();
 }
 ?>
@@ -129,7 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_id'], $_POST['
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        * {
+                * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
@@ -329,6 +332,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_id'], $_POST['
                     foreach ($message as $msg) {
                         echo '<div class="message">' . htmlspecialchars($msg) . '</div>';
                     }
+                    // Clear the message after displaying to avoid duplication on refresh
+                    $message = [];
+                    $_SESSION['message'] = null;
                 }
                 ?>
                 <div class="box-container">
