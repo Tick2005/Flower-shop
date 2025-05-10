@@ -210,10 +210,10 @@ $products = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                 <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
                     <!-- Text Content -->
                     <div>
-                        <p class="text-gray-700 mb-4 leading-relaxed">
+                        <p class="text-gray-700 mb-4 leading-relaxed" style="font-size: 1.4rem;">
                             Welcome to <span class="font-semibold text-green-600">Flora & Life</span>, your trusted destination for fresh and beautiful flowers since 2015. We are passionate about bringing nature's finest blooms to your doorstep, whether you're celebrating a special occasion or simply want to brighten someone's day.
                         </p>
-                        <p class="text-gray-700 mb-4 leading-relaxed">
+                        <p class="text-gray-700 mb-4 leading-relaxed" style="font-size: 1.4rem;">
                             Our flowers are sourced from the best local and international growers, ensuring quality and freshness in every bouquet. Our dedicated team of florists works with love and creativity to craft arrangements that suit every taste and style.
                         </p>
                         <!-- Call to Action -->
