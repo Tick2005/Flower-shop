@@ -184,9 +184,9 @@ $products = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
                                     <h3 class="product-name"><?php echo htmlspecialchars($product['name']); ?></h3>
                                     <div>
                                         <?php if ($product['sale'] > 0 && $product['sale'] < $product['price']): ?>
-                                            <span class="product-price-old"><?php echo number_format($product['price'], 0, ',', '.') . '$'; ?></span>
+                                            <span class="product-price-old"><?php echo number_format($product['price'], 2, ',', '.') . '$'; ?></span>
                                         <?php endif; ?>
-                                        <span class="product-price-new"><?php echo number_format((100 - $product['sale']) / 100 * $product['price'], 3, ',', '.') . '$'; ?></span>
+                                        <span class="product-price-new"><?php echo number_format((100 - $product['sale']) / 100 * $product['price'], 2, ',', '.') . '$'; ?></span>
                                     </div>
                                     <!-- Login to Add Button -->
                                     <a href="login.php" class="bg-green-500 text-white px-3 py-1 rounded hover:bg-green-600 mt-2 inline-block">Login to Add</a>
