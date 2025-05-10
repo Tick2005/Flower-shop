@@ -20,60 +20,84 @@ if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY']) >
 }
 $_SESSION['LAST_ACTIVITY'] = time();
 
-// Fetch cart items with product price and sale information
-$cart_items = [];
-$total_price = 0;
-$stmt = $conn->prepare("
-    SELECT c.id, c.pid, c.name, p.price, c.quantity, c.image, p.sale 
-    FROM cart c 
-    JOIN products p ON c.pid = p.id 
-    WHERE c.user_id = ?
-");
-$stmt->bind_param("i", $user_id);
-$stmt->execute();
-$result = $stmt->get_result();
-while ($row = $result->fetch_assoc()) {
-    $cart_items[] = $row;
-    // Debug: Verify price and sale values
-    // error_log("Item: {$row['name']}, Price: {$row['price']}, Sale: {$row['sale']}, Discounted: " . ($row['price'] * (100 - $row['sale']) / 100));
-    $discounted_price = $row['price'] * (100 - $row['sale']) / 100;
-    $total_price += $discounted_price * $row['quantity'];
+// Function to fetch cart items
+function fetchCartItems($conn, $user_id) {
+    $cart_items = [];
+    $total_price = 0;
+    $stmt = $conn->prepare("
+        SELECT c.id, c.pid, c.name, p.price, c.quantity, c.image, p.sale 
+        FROM cart c 
+        JOIN products p ON c.pid = p.id 
+        WHERE c.user_id = ?
+    ");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    while ($row = $result->fetch_assoc()) {
+        $cart_items[] = $row;
+        $discounted_price = $row['price'] * (100 - $row['sale']) / 100;
+        $total_price += $discounted_price * $row['quantity'];
+    }
+    return ['items' => $cart_items, 'total_price' => $total_price];
 }
 
-// Fetch cart count
+// Initial fetch of cart items
+$cart_data = fetchCartItems($conn, $user_id);
+$cart_items = $cart_data['items'];
+$total_price = $cart_data['total_price'];
 $cart_count = count($cart_items);
 
-// Handle update quantity
+// Handle increase quantity
 $message = [];
-if (isset($_POST['update_quantity'])) {
+if (isset($_POST['increase_quantity'])) {
     $cart_id = filter_var($_POST['cart_id'], FILTER_SANITIZE_NUMBER_INT);
-    $quantity = filter_var($_POST['quantity'], FILTER_SANITIZE_NUMBER_INT);
-    
-    if ($quantity > 0) {
+    $stmt = $conn->prepare("SELECT quantity FROM cart WHERE id = ? AND user_id = ?");
+    $stmt->bind_param("ii", $cart_id, $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        $new_quantity = $row['quantity'] + 1;
         $stmt = $conn->prepare("UPDATE cart SET quantity = ? WHERE id = ? AND user_id = ?");
-        $stmt->bind_param("iii", $quantity, $cart_id, $user_id);
+        $stmt->bind_param("iii", $new_quantity, $cart_id, $user_id);
         if ($stmt->execute() && $stmt->affected_rows > 0) {
-            $message[] = "Quantity updated!";
-            // Refresh cart items
-            $total_price = 0;
-            $stmt = $conn->prepare("
-                SELECT c.id, c.pid, c.name, p.price, c.quantity, c.image, p.sale 
-                FROM cart c 
-                JOIN products p ON c.pid = p.id 
-                WHERE c.user_id = ?
-            ");
-            $stmt->bind_param("i", $user_id);
-            $stmt->execute();
-            $cart_items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-            foreach ($cart_items as $item) {
-                $discounted_price = $item['price'] * (100 - $item['sale']) / 100;
-                $total_price += $discounted_price * $item['quantity'];
-            }
+            $message[] = "Quantity increased successfully!";
+            header("Location: cart.php");
+            exit();
         } else {
-            $message[] = "Failed to update quantity or item not found.";
+            $message[] = "Failed to increase quantity.";
+            error_log("Increase failed: Cart ID: $cart_id, User ID: $user_id");
         }
     } else {
-        $message[] = "Quantity must be greater than 0.";
+        $message[] = "Item not found.";
+    }
+}
+
+// Handle decrease quantity
+if (isset($_POST['decrease_quantity'])) {
+    $cart_id = filter_var($_POST['cart_id'], FILTER_SANITIZE_NUMBER_INT);
+    $stmt = $conn->prepare("SELECT quantity FROM cart WHERE id = ? AND user_id = ?");
+    $stmt->bind_param("ii", $cart_id, $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        $new_quantity = $row['quantity'] - 1;
+        if ($new_quantity < 1) {
+            $new_quantity = 1; // Prevent quantity from going below 1
+        }
+        $stmt = $conn->prepare("UPDATE cart SET quantity = ? WHERE id = ? AND user_id = ?");
+        $stmt->bind_param("iii", $new_quantity, $cart_id, $user_id);
+        if ($stmt->execute() && $stmt->affected_rows > 0) {
+            $message[] = "Quantity decreased successfully!";
+            header("Location: cart.php");
+            exit();
+        } else {
+            $message[] = "Failed to decrease quantity.";
+            error_log("Decrease failed: Cart ID: $cart_id, User ID: $user_id");
+        }
+    } else {
+        $message[] = "Item not found.";
     }
 }
 
@@ -84,24 +108,11 @@ if (isset($_POST['remove_item'])) {
     $stmt->bind_param("ii", $cart_id, $user_id);
     if ($stmt->execute() && $stmt->affected_rows > 0) {
         $message[] = "Item removed from cart!";
-        // Refresh cart items
-        $total_price = 0;
-        $stmt = $conn->prepare("
-            SELECT c.id, c.pid, c.name, p.price, c.quantity, c.image, p.sale 
-            FROM cart c 
-            JOIN products p ON c.pid = p.id 
-            WHERE c.user_id = ?
-        ");
-        $stmt->bind_param("i", $user_id);
-        $stmt->execute();
-        $cart_items = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
-        foreach ($cart_items as $item) {
-            $discounted_price = $item['price'] * (100 - $item['sale']) / 100;
-            $total_price += $discounted_price * $item['quantity'];
-        }
-        $cart_count = count($cart_items);
+        header("Location: cart.php");
+        exit();
     } else {
-        $message[] = "Failed to remove item or item not found.";
+        $message[] = "Failed to remove item. Item may not exist.";
+        error_log("Remove failed: Cart ID: $cart_id, User ID: $user_id");
     }
 }
 ?>
@@ -115,6 +126,68 @@ if (isset($_POST['remove_item'])) {
     <link rel="stylesheet" href="style1.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"/>
+    <style>
+        .quantity-controls {
+            display: flex;
+            align-items: center;
+            justify-content: center; /* Căn giữa theo chiều ngang */
+            gap: 0.5rem;
+            width: 100%; /* Đảm bảo chiếm toàn bộ chiều rộng của ô */
+        }
+        .quantity-controls button {
+            background-color: #e5e7eb;
+            color: #374151;
+            padding: 0.25rem 0.75rem; /* Tăng padding để nút đồng đều */
+            border-radius: 0.25rem;
+            border: none;
+            cursor: pointer;
+            font-size: 1rem;
+            min-width: 2rem; /* Đặt độ rộng tối thiểu để tránh co ngót */
+            text-align: center;
+        }
+        .quantity-controls button:hover {
+            background-color: #d1d5db;
+        }
+        .quantity-controls span {
+            width: 2.5rem; /* Tăng độ rộng để số lượng hiển thị rõ */
+            text-align: center;
+            display: inline-block; /* Đảm bảo span không bị ảnh hưởng bởi nội dung */
+        }
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin: 0 auto; /* Căn giữa bảng */
+        }
+        th, td {
+            padding: 1rem;
+            text-align: center; /* Căn giữa nội dung trong ô */
+            vertical-align: middle; /* Căn giữa theo chiều dọc */
+        }
+        th {
+            background-color: #f9fafb;
+            font-weight: bold;
+        }
+        td {
+            border-bottom: 1px solid #e5e7eb;
+        }
+        td img {
+            display: block;
+            margin: 0 auto; /* Căn giữa hình ảnh */
+        }
+        .action-btn {
+            background-color: #ef4444;
+            color: white;
+            padding: 0.5rem 1rem;
+            border: none;
+            border-radius: 0.25rem;
+            cursor: pointer;
+            text-align: center;
+            display: inline-block; /* Đảm bảo nút không bị lệch */
+        }
+        .action-btn:hover {
+            background-color: #dc2626;
+        }
+    </style>
 </head>
 <body>
     <header class="header bg-green-50 shadow-md sticky top-0 z-50">
@@ -151,8 +224,7 @@ if (isset($_POST['remove_item'])) {
                         <a href="/products/birthday" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Birthday Flowers</a>
                         <a href="/products/wedding" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Wedding Flowers</a>
                         <a href="/products/bouquet" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Bouquets</a>
-                        <a href="/products/basket" class="block px-4 py-2 text-gray-7
-00 hover:bg-green-100">Baskets</a>
+                        <a href="/products/basket" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Baskets</a>
                     </div>
                 </div>
                 <a href="/about" class="text-gray-700 hover:text-green-500">About</a>
@@ -197,60 +269,72 @@ if (isset($_POST['remove_item'])) {
                 <p class="text-gray-600 text-center">Your cart is empty. <a href="customer.php" class="text-green-500 hover:underline">Start shopping!</a></p>
             <?php else: ?>
                 <div class="bg-white p-6 rounded-lg shadow-md">
-                    <table class="w-full text-left">
-                        <thead>
-                            <tr class="border-b">
-                                <th class="py-2">Image</th>
-                                <th class="py-2">Product</th>
-                                <th class="py-2">Price</th>
-                                <th class="py-2">Quantity</th>
-                                <th class="py-2">Subtotal</th>
-                                <th class="py-2">Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($cart_items as $item): ?>
+                    <form id="checkout-form" action="checkout.php" method="POST">
+                        <table class="w-full text-left">
+                            <thead>
                                 <tr class="border-b">
-                                    <td class="py-4">
-                                        <img src="<?php echo htmlspecialchars($item['image']); ?>" alt="<?php echo htmlspecialchars($item['name']); ?>" class="w-16 h-16 object-cover rounded">
-                                    </td>
-                                    <td class="py-4"><?php echo htmlspecialchars($item['name']); ?></td>
-                                    <td class="py-4">
-                                        <?php 
-                                        // Calculate discounted price using products.price
-                                        $discounted_price = $item['price'] * (100 - $item['sale']) / 100;
-                                        echo number_format($discounted_price, 2, ',', '.'); 
-                                        ?>đ
-                                    </td>
-                                    <td class="py-4">
-                                        <form action="" method="POST">
-                                            <input type="hidden" name="cart_id" value="<?php echo $item['id']; ?>">
-                                            <input type="number" name="quantity" value="<?php echo $item['quantity']; ?>" min="1" class="w-16 p-1 border rounded">
-                                            <button type="submit" name="update_quantity" class="text-green-500 hover:text-green-600"><i class="fas fa-sync-alt"></i></button>
-                                        </form>
-                                    </td>
-                                    <td class="py-4">
-                                        <?php echo number_format($discounted_price * $item['quantity'], 2, ',', '.'); ?>đ
-                                    </td>
-                                    <td class="py-4">
-                                        <form action="" method="POST">
-                                            <input type="hidden" name="cart_id" value="<?php echo $item['id']; ?>">
-                                            <button type="submit" name="remove_item" class="text-red-500 hover:text-red-600"><i class="fas fa-trash-alt"></i></button>
-                                        </form>
-                                    </td>
+                                    <th class="py-2">Select</th>
+                                    <th class="py-2">Image</th>
+                                    <th class="py-2">Product</th>
+                                    <th class="py-2">Price</th>
+                                    <th class="py-2">Quantity</th>
+                                    <th class="py-2">Subtotal</th>
+                                    <th class="py-2">Action</th>
                                 </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                    <div class="mt-6 flex justify-between items-center">
-                        <div>
-                            <p class="text-lg font-bold">Total: <?php echo number_format($total_price, 2, ',', '.'); ?>đ</p>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($cart_items as $item): ?>
+                                    <tr class="border-b">
+                                        <td class="py-4">
+                                            <input type="checkbox" name="cart_ids[]" value="<?php echo $item['id']; ?>" class="item-checkbox">
+                                        </td>
+                                        <td class="py-4">
+                                            <img src="<?php echo htmlspecialchars($item['image']); ?>" alt="<?php echo htmlspecialchars($item['name']); ?>" class="w-16 h-16 object-cover rounded">
+                                        </td>
+                                        <td class="py-4"><?php echo htmlspecialchars($item['name']); ?></td>
+                                        <td class="py-4">
+                                            <?php 
+                                            $discounted_price = $item['price'] * (100 - $item['sale']) / 100;
+                                            echo number_format($discounted_price, 3, ',', '.'); 
+                                            ?>đ
+                                        </td>
+                                        <td class="py-4">
+                                            <div class="quantity-controls">
+                                                <form action="cart.php" method="POST">
+                                                    <input type="hidden" name="cart_id" value="<?php echo $item['id']; ?>">
+                                                    <button type="submit" name="decrease_quantity">-</button>
+                                                </form>
+                                                <span><?php echo $item['quantity']; ?></span>
+                                                <form action="cart.php" method="POST">
+                                                    <input type="hidden" name="cart_id" value="<?php echo $item['id']; ?>">
+                                                    <button type="submit" name="increase_quantity">+</button>
+                                                </form>
+                                            </div>
+                                        </td>
+                                        <td class="py-4">
+                                            <?php echo number_format($discounted_price * $item['quantity'], 3, ',', '.'); ?>đ
+                                        </td>
+                                        <td class="py-4">
+                                            <form action="cart.php" method="POST">
+                                                <input type="hidden" name="cart_id" value="<?php echo $item['id']; ?>">
+                                                <button type="submit" name="remove_item" style="background-color: #ef4444; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">Delete</button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                        <div class="mt-6 flex justify-between items-center">
+                            <div>
+                                <p class="text-lg font-bold">Total: <?php echo number_format($total_price, 3, ',', '.'); ?>đ</p>
+                            </div>
+                            <div>
+                                <a href="customer.php" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 mr-2">Continue Shopping</a>
+                                <button type="button" id="select-all-btn" onclick="toggleSelectAll()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mr-2">Select All</button>
+                                <button type="submit" name="checkout_selected" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Proceed to Checkout</button>
+                            </div>
                         </div>
-                        <div>
-                            <a href="customer.php" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 mr-2">Continue Shopping</a>
-                            <a href="checkout.php" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Proceed to Checkout</a>
-                        </div>
-                    </div>
+                    </form>
                 </div>
             <?php endif; ?>
         </div>
@@ -288,7 +372,7 @@ if (isset($_POST['remove_item'])) {
                     </a>
                     <a href="https://instagram.com" class="hover:text-green-300">
                         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.948-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.947-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.948-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
                         </svg>
                     </a>
                 </div>
@@ -304,6 +388,28 @@ if (isset($_POST['remove_item'])) {
         setTimeout(() => {
             document.querySelectorAll('.message').forEach(msg => msg.remove());
         }, 3000);
+
+        // Validate form submission
+        document.getElementById('checkout-form').addEventListener('submit', function(e) {
+            const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+            if (checkboxes.length === 0) {
+                e.preventDefault();
+                alert('Please select at least one item to proceed to checkout.');
+            }
+        });
+
+        // Toggle Select All functionality
+        function toggleSelectAll() {
+            const checkboxes = document.querySelectorAll('.item-checkbox');
+            const selectAllBtn = document.getElementById('select-all-btn');
+            const allChecked = Array.from(checkboxes).every(checkbox => checkbox.checked);
+
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = !allChecked;
+            });
+
+            selectAllBtn.textContent = allChecked ? 'Select All' : 'Deselect All';
+        }
     </script>
 </body>
 </html>
