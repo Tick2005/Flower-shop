@@ -92,14 +92,14 @@ $products = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
             <nav class="nav-links flex space-x-6 items-center">
                 <!-- Dropdown for Products -->
                 <div class="relative dropdown">
-                    <a href="products.php" class="text-gray-700 hover:text-green-500">Products</a>
+                    <a href="login.php" class="text-gray-700 hover:text-green-500">Products</a>
                     <div class="dropdown-menu absolute">
-                        <a href="products.php?type=birthday" class="block">Birthday Flowers</a>
-                        <a href="products.php?type=wedding" class="block">Wedding Flowers</a>
-                        <a href="products.php?type=condolence" class="block">Condolence Flowers</a>
-                        <a href="products.php?type=bouquet" class="block">Bouquets</a>
-                        <a href="products.php?type=basket" class="block">Baskets</a>
-                        <a href="products.php?type=other" class="block">Other</a>
+                        <a href="login.php" class="block">Birthday Flowers</a>
+                        <a href="login.php" class="block">Wedding Flowers</a>
+                        <a href="login.php" class="block">Condolence Flowers</a>
+                        <a href="login.php" class="block">Bouquets</a>
+                        <a href="login.php" class="block">Baskets</a>
+                        <a href="login.php" class="block">Other</a>
                     </div>
                 </div>
 
