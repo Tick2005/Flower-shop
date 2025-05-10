@@ -10,6 +10,53 @@
   <link rel="stylesheet" href="style1.css">
   <title>Flower Shop Website</title>    
   <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"/>
+  <style>
+    /* Dropdown styling */
+    .dropdown {
+      position: relative;
+    }
+
+    .dropdown > a {
+      display: block;
+      font-family: 'Arial', sans-serif;
+      color: #4b5563;
+      font-size: 1rem;
+      text-decoration: none;
+    }
+
+    .dropdown-menu {
+      visibility: hidden;
+      opacity: 0;
+      position: absolute;
+      background-color: white;
+      box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+      border-radius: 0.375rem;
+      margin-top: 0.5rem;
+      width: 12rem;
+      transform: translateY(-10%);
+      transition: all 0.3s ease;
+      z-index: 10;
+    }
+
+    .dropdown:hover .dropdown-menu {
+      visibility: visible;
+      opacity: 1;
+      transform: translateY(0);
+    }
+
+    .dropdown-menu a {
+      display: block;
+      padding: 0.5rem 1rem;
+      color: #4b5563;
+      text-decoration: none;
+      transition: background-color 0.2s ease;
+    }
+
+    .dropdown-menu a:hover {
+      background-color: #f0fdf4;
+    }
+  </style>
 </head>
 <body>
   <header class="header bg-green-50 shadow-md sticky top-0 z-50">
@@ -19,17 +66,9 @@
         <a href="index.php" class="text-2xl font-bold text-green-600">Flower Shop</a>
         <div class="contact-info">
           <div class="flex items-center gap-1">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <span>7:30 - 21:30</span>
-          </div>
-          <div class="flex items-center gap-1">
-            <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h2l1 7h12l1-7h2m-2 0a2 2 0 110 4 2 2 0 010-4zm-10 0a2 2 0 110 4 2 2 0 010-4zm-2 7h14l2 5H5l2-5z"></path>
-            </svg>
-            <span>0976491322</span>
-          </div>
+              <i class="fa-solid fa-phone"></i>
+              <span>0976491322</span>
+          </div>  
         </div>
       </div>
 
@@ -48,13 +87,13 @@
         <!-- Dropdown for Products -->
         <div class="relative dropdown">
           <a href="/products" class="text-gray-700 hover:text-green-500">Products</a>
-          <div class="dropdown-menu hidden absolute bg-white shadow-lg rounded-md mt-2 w-48">
-            <a href="/products/birthday" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Birthday Flowers</a>
-            <a href="/products/wedding" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Wedding Flowers</a>
-            <a href="/products/wedding" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Condolence Flowers</a>
-            <a href="/products/bouquet" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Bouquets</a>
-            <a href="/products/basket" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Baskets</a>
-            <a href="/products/basket" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Other</a>
+          <div class="dropdown-menu absolute">
+            <a href="/products/birthday" class="block">Birthday Flowers</a>
+            <a href="/products/wedding" class="block">Wedding Flowers</a>
+            <a href="/products/wedding" class="block">Condolence Flowers</a>
+            <a href="/products/bouquet" class="block">Bouquets</a>
+            <a href="/products/basket" class="block">Baskets</a>
+            <a href="/products/basket" class="block">Other</a>
           </div>
         </div>
 
@@ -120,7 +159,7 @@
     <!-- Product Grid Section -->
     <section class="py-12 bg-gray-100">
       <div class="container mx-auto px-4">
-        <h2 class="text-2xl font-bold text-white text-center bg-green-800 py-4 mb-8 rounded">BỘ HOA TƯƠI ĐẸP</h2>
+        <h2 class="text-2xl font-bold text-white text-center bg-green-800 py-4 mb-8 rounded">BEAUTIFUL FRESH BOUQUETS</h2>
         <div class="grid grid-cols-2 md:grid-cols-5 gap-6">
           <!-- Product 1 -->
           <div class="product-card">
@@ -129,8 +168,8 @@
             <div class="product-info">
               <h3 class="product-name">MIDNIGHT BLOOM</h3>
               <div>
-                <span class="product-price-old">1,050,000đ</span>
-                <span class="product-price-new">950,000đ</span>
+                <span class="product-price-old">42.00 USD</span>
+                <span class="product-price-new">38.00 USD</span>
               </div>
             </div>
           </div>
@@ -139,22 +178,22 @@
             <div class="product-label">-17%</div>
             <img src="https://placehold.co/300x250" alt="Blissful Bouquet" class="product-image">
             <div class="product-info">
-              <h3 class="product-name">BLISSFUL BOUQUET - BỘ HOA HẠNH PHÚC</h3>
+              <h3 class="product-name">BLISSFUL BOUQUET - HAPPINESS BOUQUET</h3>
               <div>
-                <span class="product-price-old">480,000đ</span>
-                <span class="product-price-new">400,000đ</span>
+                <span class="product-price-old">19.20 USD</span>
+                <span class="product-price-new">16.00 USD</span>
               </div>
             </div>
           </div>
           <!-- Product 3 -->
           <div class="product-card">
             <div class="product-label">-21%</div>
-            <img src="https://placehold.co/300x250" alt="Hoa Bó Pink Whispers" class="product-image">
+            <img src="https://placehold.co/300x250" alt="Pink Whispers Bouquet" class="product-image">
             <div class="product-info">
-              <h3 class="product-name">HOA BÓ PINK WHISPERS</h3>
+              <h3 class="product-name">PINK WHISPERS BOUQUET</h3>
               <div>
-                <span class="product-price-old">480,000đ</span>
-                <span class="product-price-new">380,000đ</span>
+                <span class="product-price-old">19.20 USD</span>
+                <span class="product-price-new">15.20 USD</span>
               </div>
             </div>
           </div>
@@ -165,102 +204,141 @@
             <div class="product-info">
               <h3 class="product-name">HYDRANGEA MUSE BOUQUET</h3>
               <div>
-                <span class="product-price-old">550,000đ</span>
-                <span class="product-price-new">450,000đ</span>
+                <span class="product-price-old">22.00 USD</span>
+                <span class="product-price-new">18.00 USD</span>
               </div>
             </div>
           </div>
           <!-- Product 5 -->
           <div class="product-card">
             <div class="product-label">-13%</div>
-            <img src="https://placehold.co/300x250" alt="Bó Hoa Sinh Nhật Tặng Người Yêu Xinh" class="product-image">
+            <img src="https://placehold.co/300x250" alt="Birthday Bouquet for Your Lovely Sweetheart" class="product-image">
             <div class="product-info">
-              <h3 class="product-name">BÓ HOA SINH NHẬT TẶNG NGƯỜI YÊU XINH</h3>
+              <h3 class="product-name">BIRTHDAY BOUQUET FOR YOUR LOVELY SWEETHEART</h3>
               <div>
-                <span class="product-price-old">480,000đ</span>
-                <span class="product-price-new">420,000đ</span>
+                <span class="product-price-old">19.20 USD</span>
+                <span class="product-price-new">16.80 USD</span>
               </div>
             </div>
           </div>
           <!-- Product 6 -->
           <div class="product-card">
             <div class="product-label">-20%</div>
-            <img src="https://placehold.co/300x250" alt="Bó hoa cầm tự câu Nắng Thơ" class="product-image">
+            <img src="https://placehold.co/300x250" alt="Poetic Sunshine Handheld Bouquet" class="product-image">
             <div class="product-info">
-              <h3 class="product-name">BÓ HOA CẦM TỰ CÂU NẮNG THƠ</h3>
+              <h3 class="product-name">POETIC SUNSHINE HANDHELD BOUQUET</h3>
               <div>
-                <span class="product-price-old">350,000đ</span>
-                <span class="product-price-new">280,000đ</span>
+                <span class="product-price-old">14.00 USD</span>
+                <span class="product-price-new">11.20 USD</span>
               </div>
             </div>
           </div>
           <!-- Product 7 -->
           <div class="product-card">
             <div class="product-label">-13%</div>
-            <img src="https://placehold.co/300x250" alt="Bó Hoa Giá Rẻ Cầm Tự Câu Hàn Quốc" class="product-image">
+            <img src="https://placehold.co/300x250" alt="Affordable Korean-Style Handheld Bouquet" class="product-image">
             <div class="product-info">
-              <h3 class="product-name">BÓ HOA GIÁ RẺ CẦM TỰ CÂU HÀN QUỐC</h3>
+              <h3 class="product-name">AFFORDABLE KOREAN-STYLE HANDHELD BOUQUET</h3>
               <div>
-                <span class="product-price-old">320,000đ</span>
-                <span class="product-price-new">280,000đ</span>
+                <span class="product-price-old">12.80 USD</span>
+                <span class="product-price-new">11.20 USD</span>
               </div>
             </div>
           </div>
           <!-- Product 8 -->
           <div class="product-card">
             <div class="product-label">NEW</div>
-            <img src="https://placehold.co/300x250" alt="Hoa Bó Sinh Nhật Amethyst Aura" class="product-image">
+            <img src="https://placehold.co/300x250" alt="Amethyst Aura Birthday Bouquet" class="product-image">
             <div class="product-info">
-              <h3 class="product-name">HOA BÓ SINH NHẬT AMETHYST AURA</h3>
+              <h3 class="product-name">AMETHYST AURA BIRTHDAY BOUQUET</h3>
               <div>
-                <span class="product-price-old">950,000đ</span>
-                <span class="product-price-new">850,000đ</span>
+                <span class="product-price-old">38.00 USD</span>
+                <span class="product-price-new">34.00 USD</span>
               </div>
             </div>
           </div>
           <!-- Product 9 -->
           <div class="product-card">
             <div class="product-label">-5%</div>
-            <img src="https://placehold.co/300x250" alt="Hoa Sinh Nhật Bó Hoa Hồng Shimmer Hạnh" class="product-image">
+            <img src="https://placehold.co/300x250" alt="Shimmer Happiness Rose Birthday Bouquet" class="product-image">
             <div class="product-info">
-              <h3 class="product-name">HOA SINH NHẬT BÓ HOA HỒNG SHIMMER HẠNH</h3>
+              <h3 class="product-name">SHIMMER HAPPINESS ROSE BIRTHDAY BOUQUET</h3>
               <div>
-                <span class="product-price-old">420,000đ</span>
-                <span class="product-price-new">400,000đ</span>
+                <span class="product-price-old">16.80 USD</span>
+                <span class="product-price-new">16.00 USD</span>
               </div>
             </div>
           </div>
           <!-- Product 10 -->
           <div class="product-card">
             <div class="product-label">-14%</div>
-            <img src="https://placehold.co/300x250" alt="Bó Hoa Hồng Love Daily Rose" class="product-image">
+            <img src="https://placehold.co/300x250" alt="Love Daily Rose Bouquet" class="product-image">
             <div class="product-info">
-              <h3 class="product-name">BÓ HOA HỒNG LOVE DAILY ROSE</h3>
+              <h3 class="product-name">LOVE DAILY ROSE BOUQUET</h3>
               <div>
-                <span class="product-price-old">350,000đ</span>
-                <span class="product-price-new">300,000đ</span>
+                <span class="product-price-old">14.00 USD</span>
+                <span class="product-price-new">12.00 USD</span>
               </div>
             </div>
           </div>
         </div>
         <!-- View More Button -->
-        <a href="login.php" class="view-more-btn">Xem thêm bó hoa</a>
+        <a href="login.php" class="view-more-btn">View More Bouquets</a>
       </div>
     </section>
     
     <!-- About Us Section -->
-    <section class="about-section">
+    <section class="about-section py-12 bg-green-50">
       <div class="container mx-auto px-4">
-        <h2 class="text-3xl font-bold mb-6">About Us</h2>
-        <p class="mb-4">
-          Welcome to Flower Shop, your go-to destination for fresh and beautiful flowers since 2015. We are passionate about bringing nature's finest blooms to your doorstep, whether you're celebrating a special occasion or simply want to brighten someone's day. Our mission is to create stunning floral arrangements that convey your emotions and make every moment memorable.
-        </p>
-        <p class="mb-4">
-          At Flower Shop, we source our flowers from the best local and international growers, ensuring quality and freshness in every bouquet. Our dedicated team of florists works with love and creativity to craft arrangements that suit every taste and style.
-        </p>
-        <p>
-          Visit us at 123 Flower Street, City, Country, or reach out via phone at +123 456 7890 or email at support@flowershop.com. We’re open daily from 7:30 to 21:30, ready to serve you with a smile!
-        </p>
+        <!-- Heading -->
+        <h2 class="text-4xl font-bold text-green-800 text-center mb-8">About Us</h2>
+        
+        <!-- Main Content -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-8 items-center">
+          <!-- Text Content -->
+          <div>
+            <p class="text-gray-700 mb-4 leading-relaxed">
+              Welcome to <span class="font-semibold text-green-600">Flower Shop</span>, your trusted destination for fresh and beautiful flowers since 2015. We are passionate about bringing nature's finest blooms to your doorstep, whether you're celebrating a special occasion or simply want to brighten someone's day.
+            </p>
+            <p class="text-gray-700 mb-4 leading-relaxed">
+              Our flowers are sourced from the best local and international growers, ensuring quality and freshness in every bouquet. Our dedicated team of florists works with love and creativity to craft arrangements that suit every taste and style.
+            </p>
+            <!-- Call to Action -->
+            <a href="login.php" class="inline-block mt-4 bg-green-600 text-white py-2 px-6 rounded-full hover:bg-green-700 transition duration-300">
+              Explore Our Bouquets
+            </a>
+          </div>
+          
+          <!-- Image -->
+          <div class="flex justify-center">
+            <img src="https://via.placeholder.com/400x300?text=Flower+Shop" alt="Flower Shop" class="rounded-lg shadow-lg max-w-full h-auto">
+          </div>
+        </div>
+
+        <!-- Additional Info (Contact, Hours, etc.) -->
+        <div class="mt-12 grid grid-cols-1 md:grid-cols-3 gap-6 text-center">
+          <!-- Address -->
+          <div class="about-info-card bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition duration-300">
+            <i class="fa-solid fa-map-marker-alt fa-2x text-green-600 mb-4"></i>
+            <h3 class="text-lg font-semibold text-gray-800">Our Location</h3>
+            <p class="text-gray-600">123 Flower Street, City, Country</p>
+          </div>
+          
+          <!-- Phone -->
+          <div class="about-info-card bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition duration-300">
+            <i class="fa-solid fa-phone fa-2x text-green-600 mb-4"></i>
+            <h3 class="text-lg font-semibold text-gray-800">Contact Us</h3>
+            <p class="text-gray-600">+123 456 7890</p>
+            <p class="text-gray-600">support@flowershop.com</p>
+          </div>
+          
+          <!-- Hours -->
+          <div class="about-info-card bg-white p-6 rounded-lg shadow-md hover:shadow-lg transition duration-300">
+            <i class="fa-solid fa-clock fa-2x text-green-600 mb-4"></i>
+            <h3 class="text-lg font-semibold text-gray-800">Opening Hours</h3>
+            <p class="text-gray-600">Daily: 7:30 AM - 9:30 PM</p>
+          </div>
+        </div>
       </div>
     </section>
 
@@ -312,40 +390,31 @@
     <!-- Service Section -->
     <section class="service-section">
       <div class="container mx-auto px-4">
-        <h2 class="text-2xl font-bold">Shop Hoa Tươi Online Phúc Vũ:</h2>
+        <h2 class="text-2xl font-bold">Fresh Flower Online Shop Services:</h2>
         <div class="service-grid mt-6">
-          <!-- Service 1: Giao Hoa Nhanh -->
+          <!-- Service 1: Fast Flower Delivery -->
           <div class="service-item">
-            <svg class="service-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-            </svg>
-            <h3 class="service-title">Giao Hoa Nhanh</h3>
-            <p class="service-description">Trong 90 - 120 phút</p>
+            <i class="fa-solid fa-clock fa-4x mb-4"></i>
+            <h3 class="service-title">Fast Flower Delivery</h3>
+            <p class="service-description">Within 90 - 120 Minutes</p>
           </div>
-          <!-- Service 2: Miễn Phí Giao Hàng -->
+          <!-- Service 2: Free Delivery -->
           <div class="service-item">
-            <svg class="service-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2m-3 7h3m-3 4h3m-6-4h.01m-.01 4h.01"></path>
-            </svg>
-            <h3 class="service-title">Miễn Phí Giao Hàng</h3>
-            <p class="service-description">(>200K - Quận 1,3,5)</p>
+            <i class="fa-solid fa-truck-fast fa-4x mb-4"></i>
+            <h3 class="service-title">Free Delivery</h3>
+            <p class="service-description">(>8 USD - Districts 1, 3, 5)</p>
           </div>
-          <!-- Service 3: Giao Hoa Tận Nơi -->
+          <!-- Service 3: Doorstep Flower Delivery -->
           <div class="service-item">
-            <svg class="service-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
-            </svg>
-            <h3 class="service-title">Giao Hoa Tận Nơi</h3>
-            <p class="service-description">Đảm Bảo Hoa Tươi</p>
+            <i class="fa-solid fa-compass fa-4x mb-4"></i>
+            <h3 class="service-title">Doorstep Flower Delivery</h3>
+            <p class="service-description">Guaranteed Fresh Flowers</p>
           </div>
-          <!-- Service 4: Hoa Giao Đúng Mẫu -->
+          <!-- Service 4: Flowers Delivered as Designed -->
           <div class="service-item">
-            <svg class="service-icon" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"></path>
-              <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 3a4 4 0 100 8 4 4 0 000-8z"></path>
-            </svg>
-            <h3 class="service-title">Hoa Giao Đúng Mẫu</h3>
-            <p class="service-description">Đúng Tone Màu</p>
+            <i class="fa-solid fa-clipboard-check fa-4x mb-4"></i>
+            <h3 class="service-title">Flowers Delivered as Designed</h3>
+            <p class="service-description">Exact Color Tone</p>
           </div>
         </div>
       </div>
@@ -370,7 +439,6 @@
         <h3 class="text-lg font-bold mb-4">Quick Links</h3>
         <ul class="space-y-2">
           <li><a href="/products" class="hover:text-green-300">Products</a></li>
-          <li><a href="/about" class="hover:text-green-300">About</a></li>
           <li><a href="/login" class="hover:text-green-300">Login/Register</a></li>
         </ul>
       </div>
