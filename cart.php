@@ -115,6 +115,25 @@ if (isset($_POST['remove_item'])) {
         error_log("Remove failed: Cart ID: $cart_id, User ID: $user_id");
     }
 }
+
+// Handle logout
+if (isset($_POST['logout'])) {
+    try {
+        $stmt = $conn->prepare("UPDATE users SET status = 'Offline', updated_at = NOW() WHERE id = ?");
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+        error_log("Admin ID $user_id status set to Offline due to logout");
+        session_unset();
+        session_destroy();
+        header('Location: index.php');
+        exit();
+    } catch (Exception $e) {
+        $_SESSION['message'] = 'Failed to logout: ' . htmlspecialchars($e->getMessage());
+        error_log("Error during logout (ID: $user_id): " . $e->getMessage());
+        header('Location: ' . $_SERVER['PHP_SELF']);
+        exit();
+    }
+}
 ?>
 
 <!DOCTYPE html>
@@ -187,20 +206,59 @@ if (isset($_POST['remove_item'])) {
         .action-btn:hover {
             background-color: #dc2626;
         }
+
+        /* Dropdown styling */
+        .dropdown {
+            position: relative;
+        }
+
+        .dropdown > a {
+            font-family: 'Arial', sans-serif;
+            color: #4b5563;
+            font-size: 1rem;
+            text-decoration: none;
+        }
+
+        .dropdown-menu {
+            visibility: hidden;
+            opacity: 0;
+            position: absolute;
+            background-color: white;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            border-radius: 0.375rem;
+            margin-top: 0.5rem;
+            width: 12rem;
+            transform: translateY(-10%);
+            transition: all 0.3s ease;
+            z-index: 10;
+        }
+
+        .dropdown:hover .dropdown-menu {
+            visibility: visible;
+            opacity: 1;
+            transform: translateY(0);
+        }
+
+        .dropdown-menu a {
+            display: block;
+            padding: 0.5rem 1rem;
+            color: #4b5563;
+            text-decoration: none;
+            transition: background-color 0.2s ease;
+        }
+
+        .dropdown-menu a:hover {
+            background-color: #f0fdf4;
+        }
     </style>
 </head>
 <body>
     <header class="header bg-green-50 shadow-md sticky top-0 z-50">
         <div class="container mx-auto px-4 py-4 flex justify-between items-center">
             <div class="flex items-center space-x-6">
-                <a href="/" class="text-2xl font-bold text-green-600">Flower Shop</a>
+                <a href="/" class="text-2xl font-bold text-green-600">Flora & Life</a>
                 <div class="contact-info">
-                    <div class="flex items-center gap-1">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-                        </svg>
-                        <span>7:30 - 21:30</span>
-                    </div>
+                    
                     <div class="flex items-center gap-1">
                         <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
                             <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h2l1 7h12l1-7h2m-2 0a2 2 0 110 4 2 2 0 010-4zm-10 0a2 2 0 110 4 2 2 0 010-4zm-2 7h14l2 5H5l2-5z"></path>
@@ -218,16 +276,18 @@ if (isset($_POST['remove_item'])) {
                 </div>
             </div>
             <nav class="nav-links flex space-x-6 items-center">
+                <!-- Dropdown for Products -->
                 <div class="relative dropdown">
-                    <a href="/products" class="text-gray-700 hover:text-green-500">Products</a>
-                    <div class="dropdown-menu hidden absolute bg-white shadow-lg rounded-md mt-2 w-48">
-                        <a href="/products/birthday" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Birthday Flowers</a>
-                        <a href="/products/wedding" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Wedding Flowers</a>
-                        <a href="/products/bouquet" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Bouquets</a>
-                        <a href="/products/basket" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Baskets</a>
+                    <a href="product.php" class="text-gray-700 hover:text-green-500">Products</a>
+                    <div class="dropdown-menu absolute">
+                        <a href="product.php" class="block">Birthday Flowers</a>
+                        <a href="product.php" class="block">Wedding Flowers</a>
+                        <a href="product.php" class="block">Condolence Flowers</a>
+                        <a href="product.php" class="block">Bouquets</a>
+                        <a href="product.php" class="block">Baskets</a>
+                        <a href="product.php" class="block">Other</a>
                     </div>
                 </div>
-                <a href="/about" class="text-gray-700 hover:text-green-500">About</a>
                 <div class="relative dropdown">
                     <a href="#" class="text-gray-700 hover:text-green-500 flex items-center">
                         <svg class="w-6 h-6 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -235,9 +295,12 @@ if (isset($_POST['remove_item'])) {
                         </svg>
                         <span><?php echo htmlspecialchars($user_name); ?></span>
                     </a>
-                    <div class="dropdown-menu hidden absolute bg-white shadow-lg rounded-md mt-2 w-48 right-0">
-                        <a href="customer_header.php" class="block px-4 py-2 text-gray-700 hover:bg-green-100">My Account</a>
-                        <a href="logout.php" class="block px-4 py-2 text-gray-700 hover:bg-green-100">Logout</a>
+                    <div class="dropdown-menu absolute">
+                        <a href="customer_info.php" class="block">My Account</a>
+                        <a href="logout.php" class="block">Logout</a>
+                        <form method="POST" action="">
+                            <button type="submit" name="logout" class="block w-full text-left px-4 py-2 text-gray-700 hover:bg-green-100">Logout</button>
+                        </form>
                     </div>
                 </div>
                 <a href="cart.php" class="text-gray-700 hover:text-green-500 relative">
@@ -295,8 +358,8 @@ if (isset($_POST['remove_item'])) {
                                         <td class="py-4">
                                             <?php 
                                             $discounted_price = $item['price'] * (100 - $item['sale']) / 100;
-                                            echo number_format($discounted_price, 3, ',', '.'); 
-                                            ?>đ
+                                            echo number_format($discounted_price, 2, ',', '.'); 
+                                            ?>$
                                         </td>
                                         <td class="py-4">
                                             <div class="quantity-controls">
@@ -312,7 +375,7 @@ if (isset($_POST['remove_item'])) {
                                             </div>
                                         </td>
                                         <td class="py-4">
-                                            <?php echo number_format($discounted_price * $item['quantity'], 3, ',', '.'); ?>đ
+                                            <?php echo number_format($discounted_price * $item['quantity'], 2, ',', '.'); ?>$
                                         </td>
                                         <td class="py-4">
                                             <form action="cart.php" method="POST">
@@ -326,7 +389,7 @@ if (isset($_POST['remove_item'])) {
                         </table>
                         <div class="mt-6 flex justify-between items-center">
                             <div>
-                                <p class="text-lg font-bold">Total: <?php echo number_format($total_price, 3, ',', '.'); ?>đ</p>
+                                <p class="text-lg font-bold">Total: <?php echo number_format($total_price, 2, ',', '.'); ?>$</p>
                             </div>
                             <div>
                                 <a href="customer.php" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 mr-2">Continue Shopping</a>
@@ -352,9 +415,9 @@ if (isset($_POST['remove_item'])) {
             <div>
                 <h3 class="text-lg font-bold mb-4">Quick Links</h3>
                 <ul class="space-y-2">
-                    <li><a href="/products" class="hover:text-green-300">Products</a></li>
-                    <li><a href="/about" class="hover:text-green-300">About</a></li>
-                    <li><a href="logout.php" class="hover:text-green-300">Logout</a></li>
+                    <li><a href="login.php" class="hover:text-green-300">Products</a></li>
+                    <li><a href="login.php" class="hover:text-green-300">Login</a></li>
+                    <li><a href="register.php" class="hover:text-green-300">Sign up</a></li>
                 </ul>
             </div>
             <div>
@@ -379,7 +442,7 @@ if (isset($_POST['remove_item'])) {
             </div>
         </div>
         <div class="border-t border-green-700 mt-8 pt-4 text-center">
-            <p>© 2025 Flower Shop. All rights reserved.</p>
+            <p>© 2025 Flora & Life. All rights reserved.</p>
         </div>
     </footer>
 
