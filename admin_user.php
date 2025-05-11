@@ -2,7 +2,6 @@
 ob_start(); // Start output buffering
 session_start();
 include 'connection.php';
-include 'admin_header.php';
 
 $timeout_duration = 600; // 10 minutes
 if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY']) > $timeout_duration) {
@@ -166,12 +165,15 @@ if (isset($_POST['update_user']) && isset($_POST['csrf_token']) && $_POST['csrf_
         .container {
             display: flex;
             min-height: 100vh;
+            flex-direction: column;
         }
 
         .main-content {
             flex: 1;
             padding: 40px;
-            margin-left: 250px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
         }
 
         .manage-user h1 {
@@ -189,7 +191,7 @@ if (isset($_POST['update_user']) && isset($_POST['csrf_token']) && $_POST['csrf_
             border-radius: 10px;
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
             max-width: 600px;
-            margin: 0 auto 40px;
+            margin: 0 auto 40px auto;
         }
 
         .input-field {
@@ -224,6 +226,7 @@ if (isset($_POST['update_user']) && isset($_POST['csrf_token']) && $_POST['csrf_
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
+            justify-content: center;
         }
 
         .box {
@@ -234,6 +237,7 @@ if (isset($_POST['update_user']) && isset($_POST['csrf_token']) && $_POST['csrf_
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s;
             text-align: center;
+            max-width: 300px;
         }
 
         .box:hover {
@@ -312,35 +316,45 @@ if (isset($_POST['update_user']) && isset($_POST['csrf_token']) && $_POST['csrf_
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
             font-weight: 500;
             z-index: 1000;
-        }
-        .menu-toggle {
-            display: none;
+            animation: slideIn 0.5s ease-out;
         }
 
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+
+        .message.hide {
+            animation: slideOut 0.5s ease-out forwards;
+        }
+
+        @keyframes slideOut {
+            from { transform: translateX(0); }
+            to { transform: translateX(100%); opacity: 0; }
+        }
 
         @media (max-width: 768px) {
-            .container {
-                flex-direction: column;
-            }
-            .menu-toggle {
-            display: block;
-        }
             .main-content {
                 padding: 20px;
-                margin-left: 0;
             }
 
             .add-admin form {
                 max-width: 100%;
+                padding: 20px;
             }
 
             .box-container {
                 grid-template-columns: 1fr;
             }
+
+            .box {
+                max-width: 100%;
+            }
         }
     </style>
 </head>
 <body>
+    <?php include 'admin_header.php'; ?>
     <div class="container">
         <main class="main-content">
             <section class="manage-user">
@@ -464,7 +478,10 @@ if (isset($_POST['update_user']) && isset($_POST['csrf_token']) && $_POST['csrf_
         }
 
         setTimeout(() => {
-            document.querySelectorAll('.message').forEach(msg => msg.remove());
+            document.querySelectorAll('.message').forEach(msg => msg.classList.add('hide'));
+            setTimeout(() => {
+                document.querySelectorAll('.message').forEach(msg => msg.remove());
+            }, 500);
         }, 3000);
     </script>
 </body>
