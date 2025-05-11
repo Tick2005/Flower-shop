@@ -132,7 +132,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_id'], $_POST['
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
     <style>
-                * {
+        * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
@@ -147,12 +147,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_id'], $_POST['
         .container {
             display: flex;
             min-height: 100vh;
+            flex-direction: column;
         }
 
         .main-content {
             flex: 1;
             padding: 40px;
-            margin-left: 250px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
         }
 
         .reviews h1 {
@@ -167,32 +170,47 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_id'], $_POST['
             margin-bottom: 20px;
             display: flex;
             gap: 10px;
+            justify-content: center;
+            max-width: 600px;
+            margin-left: auto;
+            margin-right: auto;
         }
 
         .search-bar input {
             padding: 10px;
-            border: 1px solid #ddd;
+            border: 1px solid #d4c7b0;
             border-radius: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            color: #4a3c31;
             flex: 1;
+            transition: border-color 0.3s;
+        }
+
+        .search-bar input:focus {
+            outline: none;
+            border-color: #b89b72;
         }
 
         .search-bar button {
-            background: #e57373;
+            background: #b89b72;
             color: white;
             padding: 10px 20px;
             border: none;
             border-radius: 5px;
             cursor: pointer;
+            transition: background 0.3s, transform 0.2s;
         }
 
         .search-bar button:hover {
-            background: #d32f2f;
+            background: #a68a64;
+            transform: translateY(-2px);
         }
 
         .box-container {
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
             gap: 20px;
+            justify-content: center;
         }
 
         .box {
@@ -202,6 +220,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_id'], $_POST['
             border-radius: 10px;
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
             transition: transform 0.3s;
+            max-width: 350px;
         }
 
         .box:hover {
@@ -230,7 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_id'], $_POST['
             transition: background 0.3s, transform 0.2s;
             text-decoration: none;
             display: inline-block;
-            margin-right: 10px;
+            margin: 5px;
         }
 
         .btn:hover {
@@ -245,17 +264,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_id'], $_POST['
         .reply-form textarea {
             width: 100%;
             padding: 10px;
-            border: 1px solid #ddd;
+            border: 1px solid #d4c7b0;
             border-radius: 5px;
+            background: rgba(255, 255, 255, 0.5);
+            color: #4a3c31;
             resize: vertical;
             margin-bottom: 10px;
+            transition: border-color 0.3s;
+        }
+
+        .reply-form textarea:focus {
+            outline: none;
+            border-color: #b89b72;
         }
 
         .replies {
             margin-top: 15px;
             padding: 10px;
-            background: #f9f9f9;
+            background: rgba(255, 255, 255, 0.95);
             border-radius: 5px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.05);
         }
 
         .replies p {
@@ -274,6 +302,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_id'], $_POST['
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
             font-weight: 500;
             z-index: 1000;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+
+        .message.hide {
+            animation: slideOut 0.5s ease-out forwards;
+        }
+
+        @keyframes slideOut {
+            from { transform: translateX(0); }
+            to { transform: translateX(100%); opacity: 0; }
         }
 
         .pagination {
@@ -285,32 +328,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_id'], $_POST['
             display: inline-block;
             padding: 8px 16px;
             margin: 0 4px;
-            background: #e57373;
+            background: #b89b72;
             color: white;
             text-decoration: none;
             border-radius: 5px;
+            transition: background 0.3s, transform 0.2s;
         }
 
         .pagination a:hover {
-            background: #d32f2f;
+            background: #a68a64;
+            transform: translateY(-2px);
         }
 
         .pagination a.active {
-            background: #b89b72;
+            background: #a68a64;
+            transform: translateY(0);
         }
 
         @media (max-width: 768px) {
-            .container {
-                flex-direction: column;
-            }
-
             .main-content {
                 padding: 20px;
-                margin-left: 0;
+            }
+
+            .search-bar {
+                flex-direction: column;
+                max-width: 100%;
+            }
+
+            .search-bar input,
+            .search-bar button {
+                width: 100%;
             }
 
             .box-container {
                 grid-template-columns: 1fr;
+            }
+
+            .box {
+                max-width: 100%;
             }
         }
     </style>
@@ -406,7 +461,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_id'], $_POST['
                             <input type="hidden" name="review_id" value="<?php echo htmlspecialchars($review['id']); ?>">
                             <input type="hidden" name="csrf_token" value="<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>">
                             <button type="submit" class="btn">Post Reply</button>
-                            <a href="admin_reviews.php?delete=<?php echo htmlspecialchars($review['id']); ?>&csrf_token=<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>&page=<?php echo $page; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?>" 
+                            <a href="admin_message.php?delete=<?php echo htmlspecialchars($review['id']); ?>&csrf_token=<?php echo htmlspecialchars($_SESSION['csrf_token']); ?>&page=<?php echo $page; ?><?php echo $search ? '&search=' . urlencode($search) : ''; ?>" 
                                class="btn" 
                                onclick="return confirm('Delete this review?')">Delete</a>
                         </form>
@@ -448,7 +503,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_id'], $_POST['
                     echo '<div class="pagination">';
                     for ($i = 1; $i <= $total_pages; $i++) {
                         $active = $i === $page ? ' active' : '';
-                        echo '<a href="admin_reviews.php?page=' . $i . ($search ? '&search=' . urlencode($search) : '') . '" class="' . $active . '">' . $i . '</a>';
+                        echo '<a href="admin_message.php?page=' . $i . ($search ? '&search=' . urlencode($search) : '') . '" class="' . $active . '">' . $i . '</a>';
                     }
                     echo '</div>';
                 }
@@ -457,9 +512,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_id'], $_POST['
         </main>
     </div>
     <script>
-        // Auto-remove messages after 3 seconds
+        // Auto-remove messages after 3 seconds with animation
         setTimeout(() => {
-            document.querySelectorAll('.message').forEach(msg => msg.remove());
+            document.querySelectorAll('.message').forEach(msg => msg.classList.add('hide'));
+            setTimeout(() => {
+                document.querySelectorAll('.message').forEach(msg => msg.remove());
+            }, 500);
         }, 3000);
     </script>
 </body>
