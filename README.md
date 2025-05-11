@@ -10,21 +10,22 @@ Table of Contents
 - Contributing
 - License
 - Features
+  
 User Registration and Login: Users can create an account, log in, and manage their profiles.
 Product Catalog: Browse a wide variety of flowers and arrangements categorized by occasion (e.g., birthdays, weddings, condolences).
 Shopping Cart: Add products to the cart, adjust quantities, and proceed to checkout.
 Order Management: Users can view their order history and track the status of their orders.
 Admin Dashboard: Admins can manage products, view orders, and handle user accounts.
-Installation
+
+## Installation
 To set up the Flower Shop Web Application locally, follow these steps:
 
 Clone the Repository:
 
-bash
 Run
-Copy code
 git clone https://github.com/yourusername/flower-shop.git
 cd flower-shop
+
 Set Up the Database:
 
 Create a MySQL database named flower_db.
