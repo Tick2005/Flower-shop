@@ -81,33 +81,32 @@ Follow these steps to set up the project locally:
 ### 1. Clone the Repository
 
 ```bash
-git clone https://github.com/yourusername/flower-shop.git
+git clone [https://github.com/yourusername/flower-shop.git](https://github.com/Tick2005/Flower-shop)
 cd flower-shop
 ```
 
 ### 2. Database Setup
 
-- Open phpmyadmin on yoor localhost and import file flower_db.sql
+- Open phpmyadmin on yoor localhost and import file flower_db.sql.
 - Or way, use can copy and add code file sql in name row is SQL near Database.
 
-In database, we created xx table:
+### 3. Configure Database Connection
 
-+
-+
-+
-+
-+
-
-And with some link table with together such as:
-
-+
-+
-+
-+
-+
-
-And have 2 trigger to create ID for user and order with code here:
+In file connection.php, update your database credentials:
 
 ```bash
-
+    $host = 'localhost';
+    $user = 'root';
+    $password = '';
+    $database = 'flower_db';
 ```
+
+### 4. Start Local Server
+
+- Open XAMPP and start Apache and SQL
+- Navigate http://localhost/flower-shop/index.php
+
+## 🧪 Usage & Examples
+
+### Homepage
+
