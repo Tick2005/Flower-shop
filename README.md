@@ -22,10 +22,11 @@ To set up the Flower Shop Web Application locally, follow these steps:
 
 Clone the Repository:
 
-Run
+bash
+"
 git clone https://github.com/yourusername/flower-shop.git
 cd flower-shop
-
+"
 Set Up the Database:
 
 Create a MySQL database named flower_db.
