@@ -412,6 +412,7 @@ if (isset($_POST['logout'])) {
                         </svg>
                         <span><?php echo htmlspecialchars($user_name); ?></span>
                     </a>
+                    <a href="./customer.php" class="text-gray-700 hover:text-green-500">Home</a>
                     <div class="dropdown-menu">
                         <a href="customer_info.php">My Account</a>
                         <form method="POST">
