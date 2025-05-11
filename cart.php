@@ -83,18 +83,30 @@ if (isset($_POST['decrease_quantity'])) {
     if ($result->num_rows > 0) {
         $row = $result->fetch_assoc();
         $new_quantity = $row['quantity'] - 1;
-        if ($new_quantity < 1) {
-            $new_quantity = 1; // Prevent quantity from going below 1
-        }
-        $stmt = $conn->prepare("UPDATE cart SET quantity = ? WHERE id = ? AND user_id = ?");
-        $stmt->bind_param("iii", $new_quantity, $cart_id, $user_id);
-        if ($stmt->execute() && $stmt->affected_rows > 0) {
-            $message[] = "Quantity decreased successfully!";
-            header("Location: cart.php");
-            exit();
+        if ($new_quantity <= 0) {
+            // Remove item if quantity would be 0
+            $stmt = $conn->prepare("DELETE FROM cart WHERE id = ? AND user_id = ?");
+            $stmt->bind_param("ii", $cart_id, $user_id);
+            if ($stmt->execute() && $stmt->affected_rows > 0) {
+                $message[] = "Item removed from cart as quantity reached 0!";
+                header("Location: cart.php");
+                exit();
+            } else {
+                $message[] = "Failed to remove item.";
+                error_log("Remove failed: Cart ID: $cart_id, User ID: $user_id");
+            }
         } else {
-            $message[] = "Failed to decrease quantity.";
-            error_log("Decrease failed: Cart ID: $cart_id, User ID: $user_id");
+            // Update quantity
+            $stmt = $conn->prepare("UPDATE cart SET quantity = ? WHERE id = ? AND user_id = ?");
+            $stmt->bind_param("iii", $new_quantity, $cart_id, $user_id);
+            if ($stmt->execute() && $stmt->affected_rows > 0) {
+                $message[] = "Quantity decreased successfully!";
+                header("Location: cart.php");
+                exit();
+            } else {
+                $message[] = "Failed to decrease quantity.";
+                error_log("Decrease failed: Cart ID: $cart_id, User ID: $user_id");
+            }
         }
     } else {
         $message[] = "Item not found.";
@@ -118,56 +130,13 @@ if (isset($_POST['remove_item'])) {
 
 // Handle logout
 if (isset($_POST['logout'])) {
-    try {
-        $stmt = $conn->prepare("UPDATE users SET status = 'Offline', updated_at = NOW() WHERE id = ?");
-        $stmt->bind_param("i", $user_id);
-        $stmt->execute();
-        error_log("Admin ID $user_id status set to Offline due to logout");
-        session_unset();
-        session_destroy();
-        header('Location: index.php');
-        exit();
-    } catch (Exception $e) {
-        $_SESSION['message'] = 'Failed to logout: ' . htmlspecialchars($e->getMessage());
-        error_log("Error during logout (ID: $user_id): " . $e->getMessage());
-        header('Location: ' . $_SERVER['PHP_SELF']);
-        exit();
-    }
+    $stmt = $conn->prepare("UPDATE users SET status='Offline' WHERE id=?");
+    $stmt->bind_param("i", $user_id);
+    $stmt->execute();
+    session_destroy();
+    header("Location: index.php");
+    exit();
 }
-
-// Handle add to cart
-$message = [];
-if (isset($_POST['add_to_cart']) && $user_id) {
-    $pid = filter_var($_POST['pid'], FILTER_SANITIZE_NUMBER_INT);
-    $name = mysqli_real_escape_string($conn, filter_var($_POST['name'], FILTER_SANITIZE_STRING));
-    $price = filter_var($_POST['price'], FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
-    $image = mysqli_real_escape_string($conn, filter_var($_POST['image'], FILTER_SANITIZE_STRING));
-    $quantity = filter_var($_POST['quantity'], FILTER_SANITIZE_NUMBER_INT);
-
-    // Validate inputs
-    if ($pid <= 0 || $quantity <= 0 || $price < 0) {
-        $message[] = "Invalid product or quantity!";
-    } else {
-        // Check if product is already in cart
-        $stmt = $conn->prepare("SELECT id FROM cart WHERE user_id = ? AND pid = ?");
-        $stmt->bind_param("ii", $user_id, $pid);
-        $stmt->execute();
-        if ($stmt->get_result()->num_rows > 0) {
-            $message[] = "Product already in cart!";
-        } else {
-            // Add product to cart
-            $stmt = $conn->prepare("INSERT INTO cart (user_id, pid, name, price, quantity, image) VALUES (?, ?, ?, ?, ?, ?)");
-            $stmt->bind_param("iisdis", $user_id, $pid, $name, $price, $quantity, $image);
-            if ($stmt->execute()) {
-                $message[] = "Product added to cart!";
-                $cart_count++;
-            } else {
-                $message[] = "Failed to add product to cart.";
-            }
-        }
-    }
-}
-
 ?>
 
 <!DOCTYPE html>
@@ -175,7 +144,7 @@ if (isset($_POST['add_to_cart']) && $user_id) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shopping Cart - Flower Shop</title>
+    <title>Shopping Cart - Flora & Life</title>
     <link rel="stylesheet" href="style1.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"/>
@@ -183,38 +152,38 @@ if (isset($_POST['add_to_cart']) && $user_id) {
         .quantity-controls {
             display: flex;
             align-items: center;
-            justify-content: center; /* Căn giữa theo chiều ngang */
+            justify-content: center;
             gap: 0.5rem;
-            width: 100%; /* Đảm bảo chiếm toàn bộ chiều rộng của ô */
+            width: 100%;
         }
         .quantity-controls button {
             background-color: #e5e7eb;
             color: #374151;
-            padding: 0.25rem 0.75rem; /* Tăng padding để nút đồng đều */
+            padding: 0.25rem 0.75rem;
             border-radius: 0.25rem;
             border: none;
             cursor: pointer;
             font-size: 1rem;
-            min-width: 2rem; /* Đặt độ rộng tối thiểu để tránh co ngót */
+            min-width: 2rem;
             text-align: center;
         }
         .quantity-controls button:hover {
             background-color: #d1d5db;
         }
         .quantity-controls span {
-            width: 2.5rem; /* Tăng độ rộng để số lượng hiển thị rõ */
+            width: 2.5rem;
             text-align: center;
-            display: inline-block; /* Đảm bảo span không bị ảnh hưởng bởi nội dung */
+            display: inline-block;
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin: 0 auto; /* Căn giữa bảng */
+            margin: 0 auto;
         }
         th, td {
             padding: 1rem;
-            text-align: center; /* Căn giữa nội dung trong ô */
-            vertical-align: middle; /* Căn giữa theo chiều dọc */
+            text-align: center;
+            vertical-align: middle;
         }
         th {
             background-color: #f9fafb;
@@ -225,7 +194,7 @@ if (isset($_POST['add_to_cart']) && $user_id) {
         }
         td img {
             display: block;
-            margin: 0 auto; /* Căn giữa hình ảnh */
+            margin: 0 auto;
         }
         .action-btn {
             background-color: #ef4444;
@@ -235,30 +204,27 @@ if (isset($_POST['add_to_cart']) && $user_id) {
             border-radius: 0.25rem;
             cursor: pointer;
             text-align: center;
-            display: inline-block; /* Đảm bảo nút không bị lệch */
+            display: inline-block;
         }
         .action-btn:hover {
             background-color: #dc2626;
         }
-
-        /* Dropdown styling */
+        /* Header Dropdown Styling */
         .dropdown {
             position: relative;
         }
-
         .dropdown > a {
             font-family: 'Arial', sans-serif;
             color: #4b5563;
             font-size: 1rem;
             text-decoration: none;
         }
-
         .dropdown-menu {
             visibility: hidden;
             opacity: 0;
             position: absolute;
             background-color: white;
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
             border-radius: 0.375rem;
             margin-top: 0.5rem;
             width: 12rem;
@@ -266,84 +232,145 @@ if (isset($_POST['add_to_cart']) && $user_id) {
             transition: all 0.3s ease;
             z-index: 10;
         }
-
         .dropdown:hover .dropdown-menu {
             visibility: visible;
             opacity: 1;
             transform: translateY(0);
         }
-
-        .dropdown-menu a {
+        .dropdown-menu a, .dropdown-menu button {
             display: block;
             padding: 0.5rem 1rem;
             color: #4b5563;
             text-decoration: none;
             transition: background-color 0.2s ease;
         }
-
-        .dropdown-menu a:hover {
+        .dropdown-menu button {
+            width: 100%;
+            text-align: left;
+            background: none;
+            border: none;
+            cursor: pointer;
+        }
+        .dropdown-menu a:hover, .dropdown-menu button:hover {
             background-color: #f0fdf4;
+        }
+        /* Search Bar Styling */
+        .search-bar form {
+            position: relative;
+            width: 100%;
+        }
+        .search-bar input {
+            width: 100%;
+            padding: 0.5rem 2.5rem;
+            border: 2px solid #d1d5db;
+            border-radius: 9999px;
+            background-color: #f9fafb;
+            font-size: 0.875rem;
+            color: #1f2937;
+            transition: all 0.3s ease;
+        }
+        .search-bar input:focus {
+            outline: none;
+            border-color: #16a34a;
+            box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+        }
+        .search-bar input:hover {
+            border-color: #16a34a;
+        }
+        .search-bar .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6b7280;
+        }
+        .search-bar .clear-icon {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6b7280;
+            cursor: pointer;
+            display: none;
+        }
+        .search-bar input:not(:placeholder-shown) + .search-icon + .clear-icon {
+            display: block;
+        }
+        .search-bar .clear-icon:hover {
+            color: #16a34a;
+        }
+        /* Message Styling */
+        .message {
+            animation: fadeOut 3s forwards;
+            color: white; 
+            padding: 0.5rem;
+            border-radius: 0.375rem;
+        }
+        @keyframes fadeOut {
+            0% { opacity: 1; }
+            80% { opacity: 1; }
+            100% { opacity: 0; display: none; }
+        }
+        @media (max-width: 640px) {
+            .search-bar {
+                width: 100%;
+            }
         }
     </style>
 </head>
 <body>
-    <header class="header bg-green-50 shadow-md sticky top-0 z-50">
+    <header class="bg-green-50 shadow-md sticky top-0 z-50">
         <div class="container mx-auto px-4 py-4 flex justify-between items-center">
             <div class="flex items-center space-x-6">
                 <a href="customer.php" class="text-2xl font-bold text-green-600">Flora & Life</a>
-                <div class="contact-info">
-                    
+                <div class="contact-info text-sm">
                     <div class="flex items-center gap-1">
-                        <svg fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h2l1 7h12l1-7h2m-2 0a2 2 0 110 4 2 2 0 010-4zm-10 0a2 2 0 110 4 2 2 0 010-4zm-2 7h14l2 5H5l2-5z"></path>
-                        </svg>
+                        <i class="fa-solid fa-phone"></i>
                         <span>0976491322</span>
                     </div>
                 </div>
             </div>
-            <div class="search-bar">
-                <div class="relative">
-                    <input type="text" placeholder="Search flowers..." class="w-full pl-10 pr-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:border-green-500 text-gray-700">
-                    <svg class="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                </div>
+            <div class="search-bar w-1/3">
+                <form method="GET" action="products.php">
+                    <input type="text" name="search" placeholder="Search flowers by name..." class="w-full">
+                    <i class="fas fa-search search-icon"></i>
+                    <i class="fas fa-times clear-icon" onclick="this.previousElementSibling.value='';this.style.display='none';"></i>
+                </form>
             </div>
             <nav class="nav-links flex space-x-6 items-center">
-                <!-- Dropdown for Products -->
                 <div class="relative dropdown">
                     <a href="products.php" class="text-gray-700 hover:text-green-500">Products</a>
-                    <div class="dropdown-menu absolute">
-                        <a href="products.php?type=birthday" class="block">Birthday Flowers</a>
-                        <a href="products.php?type=wedding" class="block">Wedding Flowers</a>
-                        <a href="products.php?type=condolence" class="block">Condolence Flowers</a>
-                        <a href="products.php?type=bouquet" class="block">Bouquets</a>
-                        <a href="products.php?type=basket" class="block">Baskets</a>
-                        <a href="products.php?type=other" class="block">Other</a>
+                    <div class="dropdown-menu">
+                        <a href="products.php?type=birthday">Birthday Flowers</a>
+                        <a href="products.php?type=wedding">Wedding Flowers</a>
+                        <a href="products.php?type=condolence">Condolence Flowers</a>
+                        <a href="products.php?type=bouquet">Bouquets</a>
+                        <a href="products.php?type=basket">Baskets</a>
+                        <a href="products.php?type=other">Other</a>
                     </div>
                 </div>
                 <div class="relative dropdown">
-                    <a href="#" class="text-gray-700 hover:text-green-500 flex items-center">
-                        <svg class="w-6 h-6 mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                    <a href="#" class="text-gray-700 hover:text-green-500 flex items-center space-x-2">
+                        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z" />
                         </svg>
                         <span><?php echo htmlspecialchars($user_name); ?></span>
                     </a>
-                    <div class="dropdown-menu absolute">
-                        <a href="customer_info.php" class="block">My Account</a>
-                        <form method="POST" action="">
-                            <button type="submit" name="logout" class="block w-full text-left px-4 py-2 text-gray-700 hover:bg-green-100">Logout</button>
+                    <div class="dropdown-menu">
+                        <a href="customer_info.php">My Account</a>
+                        <form method="POST">
+                            <button type="submit" name="logout">Logout</button>
                         </form>
                     </div>
                 </div>
                 <a href="cart.php" class="text-gray-700 hover:text-green-500 relative">
-                    <svg class="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z"></path>
                     </svg>
                     <span class="absolute -top-2 -right-2 bg-green-500 text-white text-xs rounded-full px-2"><?php echo $cart_count; ?></span>
                 </a>
                 <button id="menu-toggle" class="md:hidden text-gray-700">
-                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                    <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
                     </svg>
                 </button>
@@ -357,7 +384,7 @@ if (isset($_POST['add_to_cart']) && $user_id) {
 
             <?php if (!empty($message)): ?>
                 <?php foreach ($message as $msg): ?>
-                    <div class="message text-center text-yellow-500 mb-4"><?php echo htmlspecialchars($msg); ?></div>
+                    <div class="message text-center bg-green-500 mb-4"><?php echo htmlspecialchars($msg); ?></div>
                 <?php endforeach; ?>
             <?php endif; ?>
 
@@ -365,7 +392,7 @@ if (isset($_POST['add_to_cart']) && $user_id) {
                 <p class="text-gray-600 text-center">Your cart is empty. <a href="customer.php" class="text-green-500 hover:underline">Start shopping!</a></p>
             <?php else: ?>
                 <div class="bg-white p-6 rounded-lg shadow-md">
-                    <form id="checkout-form" action="checkout.php" method="POST">
+                    <form id="checkout-form" action="cart.php" method="POST">
                         <table class="w-full text-left">
                             <thead>
                                 <tr class="border-b">
@@ -391,29 +418,29 @@ if (isset($_POST['add_to_cart']) && $user_id) {
                                         <td class="py-4">
                                             <?php 
                                             $discounted_price = $item['price'] * (100 - $item['sale']) / 100;
-                                            echo number_format($discounted_price, 2, ',', '.'); 
-                                            ?>$
+                                            echo number_format($discounted_price, 3, ',', '.'); 
+                                            ?>đ
                                         </td>
                                         <td class="py-4">
                                             <div class="quantity-controls">
                                                 <form action="cart.php" method="POST">
                                                     <input type="hidden" name="cart_id" value="<?php echo $item['id']; ?>">
-                                                    <button type="submit" name="decrease_quantity">-</button>
+                                                    <button name="decrease_quantity">-</button>
                                                 </form>
                                                 <span><?php echo $item['quantity']; ?></span>
                                                 <form action="cart.php" method="POST">
                                                     <input type="hidden" name="cart_id" value="<?php echo $item['id']; ?>">
-                                                    <button type="submit" name="increase_quantity">+</button>
+                                                    <button name="increase_quantity">+</button>
                                                 </form>
                                             </div>
                                         </td>
                                         <td class="py-4">
-                                            <?php echo number_format($discounted_price * $item['quantity'], 2, ',', '.'); ?>$
+                                            <?php echo number_format($discounted_price * $item['quantity'], 3, ',', '.'); ?>$
                                         </td>
                                         <td class="py-4">
                                             <form action="cart.php" method="POST">
                                                 <input type="hidden" name="cart_id" value="<?php echo $item['id']; ?>">
-                                                <button type="submit" name="remove_item" style="background-color: #ef4444; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">Delete</button>
+                                                <button type="submit" name="remove_item" class="action-btn">Delete</button>
                                             </form>
                                         </td>
                                     </tr>
@@ -422,12 +449,12 @@ if (isset($_POST['add_to_cart']) && $user_id) {
                         </table>
                         <div class="mt-6 flex justify-between items-center">
                             <div>
-                                <p class="text-lg font-bold">Total: <?php echo number_format($total_price, 2, ',', '.'); ?>$</p>
+                                <p class="text-lg font-bold">Total: <?php echo number_format($total_price, 3, ',', '.'); ?>đ</p>
                             </div>
                             <div>
-                                <a href="products.php" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 mr-2">Continue Shopping</a>
+                                <a href="customer.php" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 mr-2">Continue Shopping</a>
                                 <button type="button" id="select-all-btn" onclick="toggleSelectAll()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mr-2">Select All</button>
-                                <button type="submit" name="checkout_selected" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Proceed to Checkout</button>
+                                <button type="submit" name="checkout_selected" id="checkout_selected" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Proceed to Checkout</button>
                             </div>
                         </div>
                     </form>
@@ -479,14 +506,32 @@ if (isset($_POST['add_to_cart']) && $user_id) {
         </div>
     </footer>
 
-    <script src="script.js"></script>
     <script>
+        // Mobile menu toggle
+        document.getElementById('menu-toggle').addEventListener('click', () => {
+            document.querySelector('.nav-links').classList.toggle('hidden');
+        });
+
+        // Search clear button functionality
+        document.querySelector('.search-bar input').addEventListener('input', function() {
+            const clearIcon = this.nextElementSibling.nextElementSibling;
+            clearIcon.style.display = this.value ? 'block' : 'none';
+        });
+
+        // Submit search form on Enter key
+        document.querySelector('.search-bar input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                this.form.submit();
+            }
+        });
+
+        // Fade out messages
         setTimeout(() => {
             document.querySelectorAll('.message').forEach(msg => msg.remove());
         }, 3000);
 
         // Validate form submission
-        document.getElementById('checkout-form').addEventListener('submit', function(e) {
+        document.getElementById('checkout_selected').addEventListener('submit', function(e) {
             const checkboxes = document.querySelectorAll('.item-checkbox:checked');
             if (checkboxes.length === 0) {
                 e.preventDefault();
