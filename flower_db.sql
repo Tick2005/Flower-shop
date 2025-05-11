@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 10, 2025 at 12:58 PM
+-- Generation Time: May 11, 2025 at 12:53 PM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -44,11 +44,8 @@ CREATE TABLE `cart` (
 --
 
 INSERT INTO `cart` (`id`, `user_id`, `pid`, `name`, `price`, `quantity`, `image`, `created_at`, `updated_at`) VALUES
-(1, 605250001, 11, 'White Orchid Wreath', 85.00, 1, '11.jpg', '2025-05-10 10:00:00', '2025-05-10 14:47:07'),
-(2, 605250001, 15, 'Pink Rose Gift Bag', 65.00, 2, '15.jpg', '2025-05-10 10:05:00', '2025-05-10 14:47:14'),
 (3, 605250002, 21, 'White Lily Bridal Bouquet', 90.00, 1, '21.jpg', '2025-05-10 10:10:00', '2025-05-10 10:10:00'),
-(4, 605250002, 31, 'Red Rose Bouquet', 65.00, 3, '31.jpg', '2025-05-10 10:15:00', '2025-05-10 10:15:00'),
-(18, 605250001, 8, 'Pink Celebration Basket', 8.00, 1, '8.jpg', '2025-05-10 17:41:48', '2025-05-10 17:41:48');
+(4, 605250002, 31, 'Red Rose Bouquet', 65.00, 3, '31.jpg', '2025-05-10 10:15:00', '2025-05-10 10:15:00');
 
 -- --------------------------------------------------------
 
@@ -59,12 +56,12 @@ INSERT INTO `cart` (`id`, `user_id`, `pid`, `name`, `price`, `quantity`, `image`
 CREATE TABLE `orders` (
   `id` bigint(20) NOT NULL,
   `user_id` bigint(20) NOT NULL,
+  `product_id` bigint(20) NOT NULL,
   `name` varchar(255) NOT NULL,
   `number` varchar(30) NOT NULL,
   `email` varchar(255) NOT NULL,
   `method` varchar(255) NOT NULL,
   `address` varchar(255) NOT NULL,
-  `total_products` text NOT NULL,
   `total_price` decimal(10,2) NOT NULL,
   `placed_on` datetime NOT NULL DEFAULT current_timestamp(),
   `payment_status` enum('pending','confirmed','completed') NOT NULL DEFAULT 'pending',
@@ -77,9 +74,12 @@ CREATE TABLE `orders` (
 -- Dumping data for table `orders`
 --
 
-INSERT INTO `orders` (`id`, `user_id`, `name`, `number`, `email`, `method`, `address`, `total_products`, `total_price`, `placed_on`, `payment_status`, `admin_approval`, `created_at`, `updated_at`) VALUES
-(605250001, 605250001, 'John Doe', '0123456789', 'john@example.com', 'COD', '123 Elm Street', 'Red Roses x2, Wedding Flowers x1', 150.00, '2025-05-06 13:05:59', 'pending', 'pending', '2025-05-06 13:05:59', '2025-05-06 13:05:59'),
-(605250002, 605250002, 'Jane Smith', '0987654321', 'jane@example.com', 'Bank Transfer', '456 Oak Street', 'Sunflower Basket x3', 120.00, '2025-05-06 13:05:59', 'confirmed', 'approved', '2025-05-06 13:05:59', '2025-05-06 13:05:59');
+INSERT INTO `orders` (`id`, `user_id`, `product_id`, `name`, `number`, `email`, `method`, `address`, `total_price`, `placed_on`, `payment_status`, `admin_approval`, `created_at`, `updated_at`) VALUES
+(605250001, 605250001, 1, 'John Doe', '0123456789', 'john@example.com', 'COD', '123 Elm Street', 150.00, '2025-05-06 13:05:59', 'pending', 'pending', '2025-05-06 13:05:59', '2025-05-11 16:41:09'),
+(605250002, 605250002, 2, 'Jane Smith', '0987654321', 'jane@example.com', 'Bank Transfer', '456 Oak Street', 120.00, '2025-05-06 13:05:59', 'confirmed', 'approved', '2025-05-06 13:05:59', '2025-05-11 16:41:13'),
+(1105250001, 605250001, 11, 'Duong', '0338756467', 'username@gmail.com', 'COD', 'xxxx', 85.00, '2025-05-11 17:49:24', 'pending', 'pending', '2025-05-11 17:49:24', '2025-05-11 17:49:24'),
+(1105250002, 605250001, 15, 'Duong', '0338756467', 'username@gmail.com', 'COD', 'xxxx', 130.00, '2025-05-11 17:49:24', 'pending', 'pending', '2025-05-11 17:49:24', '2025-05-11 17:49:24'),
+(1105250003, 605250001, 3, 'Phan Văn Dương', '0338756467', '523h0017@student.tdtu.edu.vn', 'COD', 'xxxx', 79.00, '2025-05-11 17:51:44', 'pending', 'pending', '2025-05-11 17:51:44', '2025-05-11 17:51:44');
 
 --
 -- Triggers `orders`
@@ -278,10 +278,10 @@ CREATE TABLE `users` (
 -- Dumping data for table `users`
 --
 
-INSERT INTO `users` (`id`, `name`, `email`, `password`, `status`, `user_type`, `created_at`, `updated_at`) VALUES
-(605250001, 'John Doe', 'john@example.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Online', 'user', '2025-05-06 13:05:59', '2025-05-10 17:49:58'),
-(605250002, 'Jane Smith', 'jane@example.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Offline', 'user', '2025-05-06 13:05:59', '2025-05-06 20:09:51'),
-(605250003, 'Admin User', 'admin@example.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Offline', 'admin', '2025-05-06 13:05:59', '2025-05-10 15:55:39');
+INSERT INTO `users` (`id`, `name`, `email`, `password`, `status`, `user_type`, `created_at`, `updated_at`, `verification_code`, `verified`) VALUES
+(605250001, 'John Doe', 'john@example.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Online', 'user', '2025-05-06 13:05:59', '2025-05-10 17:49:58', NULL, 0),
+(605250002, 'Jane Smith', 'jane@example.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Offline', 'user', '2025-05-06 13:05:59', '2025-05-06 20:09:51', NULL, 0),
+(605250003, 'Admin User', 'admin@example.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Offline', 'admin', '2025-05-06 13:05:59', '2025-05-10 15:55:39', NULL, 0);
 
 --
 -- Triggers `users`
@@ -319,7 +319,8 @@ ALTER TABLE `cart`
 --
 ALTER TABLE `orders`
   ADD PRIMARY KEY (`id`),
-  ADD KEY `user_id` (`user_id`);
+  ADD KEY `user_id` (`user_id`),
+  ADD KEY `orders_ibfk_2` (`product_id`);
 
 --
 -- Indexes for table `order_status_log`
@@ -365,7 +366,7 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `cart`
 --
 ALTER TABLE `cart`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=19;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
 
 --
 -- AUTO_INCREMENT for table `order_status_log`
@@ -406,7 +407,8 @@ ALTER TABLE `cart`
 -- Constraints for table `orders`
 --
 ALTER TABLE `orders`
-  ADD CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
+  ADD CONSTRAINT `orders_ibfk_1` FOREIGN KEY (`user_id`) REFERENCES `users` (`id`) ON DELETE CASCADE ON UPDATE CASCADE,
+  ADD CONSTRAINT `orders_ibfk_2` FOREIGN KEY (`product_id`) REFERENCES `products` (`id`) ON DELETE CASCADE ON UPDATE CASCADE;
 
 --
 -- Constraints for table `order_status_log`
