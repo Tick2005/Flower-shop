@@ -34,7 +34,7 @@ $final_price = $product['sale'] > 0 ? $product['price'] * (100 - $product['sale'
 
 // Check if user has ordered this product
 $ordered = false;
-$stmt = $conn->prepare("SELECT id, placed_on, total_price FROM orders WHERE user_id = ? AND total_products LIKE ?");
+$stmt = $conn->prepare("SELECT id, placed_on, total_price FROM orders WHERE user_id = ? AND product_id LIKE ?");
 $product_like = "%" . $product_id . "%";
 $stmt->bind_param("is", $user_id, $product_like);
 $stmt->execute();
