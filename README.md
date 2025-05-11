@@ -1,58 +1,113 @@
-# Flower Shop Web Application
+# 🌸 Flower Shop Web Application
 
-Welcome to the Flower Shop Web Application! This project is a fully functional online flower shop that allows users to browse, purchase, and manage their flower orders. Below is a brief overview of the application, its features, and how to get started.
+Welcome to the **Flower Shop Web Application** — a complete e-commerce platform where users can browse, purchase, and manage flower orders online. The system includes both customer-facing and admin-facing functionality, offering a seamless flower shopping experience.
 
-Table of Contents
-- Features
-- Installation
-- Usage
-- Technologies Used
-- Contributing
-- License
-- Features
-  
-User Registration and Login: Users can create an account, log in, and manage their profiles.
-Product Catalog: Browse a wide variety of flowers and arrangements categorized by occasion (e.g., birthdays, weddings, condolences).
-Shopping Cart: Add products to the cart, adjust quantities, and proceed to checkout.
-Order Management: Users can view their order history and track the status of their orders.
-Admin Dashboard: Admins can manage products, view orders, and handle user accounts.
+---
 
-## Installation
-To set up the Flower Shop Web Application locally, follow these steps:
+## 📚 Table of Contents
 
-Clone the Repository:
+- [Project Overview](#project-overview)
+- [Key Features](#key-features)
+- [Screenshots](#screenshots)
+- [Installation](#installation)
+- [Usage & Examples](#usage--examples)
+- [Dependencies](#dependencies)
+- [Contributing](#contributing)
+- [Troubleshooting & FAQ](#troubleshooting--faq)
+- [Support](#support)
+- [Acknowledgements](#acknowledgements)
+- [References](#references)
+- [License](#license)
+- [Changelog](#changelog)
+- [Known Issues](#known-issues)
+- [Badges](#badges)
 
-bash
-"
+---
+
+## 📖 Project Overview
+
+This project is a web-based flower shop where users can:
+
+- Sign up and log in
+- Browse flower arrangements by category (birthday, wedding, sympathy, etc.)
+- Add items to cart and place orders
+- View past orders and track order status
+
+Admins have access to a control panel to manage:
+
+- Products
+- User accounts
+- Orders
+
+The application is built using **PHP**, **MySQL**, **Bootstrap**, and **JavaScript**, and is designed for deployment on a local or shared hosting environment.
+
+---
+
+## 🌟 Key Features
+
+- ✅ User Registration & Login
+- ✅ Responsive Homepage with Featured Products
+- ✅ Product Categories & Search
+- ✅ Shopping Cart with Quantity Control
+- ✅ Order Management for Customers
+- ✅ Admin Dashboard (Product, Order, User Management)
+- ✅ Bootstrap-based UI for responsiveness
+- ✅ Session Management with PHP
+
+---
+
+## 📸 Screenshots
+
+> *(Screenshots should be added in the `screenshots/` folder)*
+
+- **Homepage**
+  ![](screenshots/homepage.png)
+
+- **Product Details**
+  ![](screenshots/product-details.png)
+
+- **Shopping Cart**
+  ![](screenshots/cart.png)
+
+- **Admin Dashboard**
+  ![](screenshots/admin-dashboard.png)
+
+---
+
+## 🛠️ Installation
+
+Follow these steps to set up the project locally:
+
+### 1. Clone the Repository
+
+```bash
 git clone https://github.com/yourusername/flower-shop.git
 cd flower-shop
-"
-Set Up the Database:
+```
 
-Create a MySQL database named flower_db.
-Import the flower_db.sql file located in the project directory to set up the necessary tables.
-Configure Database Connection:
+### 2. Database Setup
 
-Open the connection.php file and update the database credentials if necessary.
-Run the Application:
+- Open phpmyadmin on yoor localhost and import file flower_db.sql
+- Or way, use can copy and add code file sql in name row is SQL near Database.
 
-Start a local server (e.g., XAMPP, WAMP, or MAMP).
-Navigate to http://localhost/flower-shop/index.php in your web browser.
-Usage
-Homepage: The homepage (index.php) provides an introduction to the flower shop and showcases featured products.
-Product Pages: Click on any product to view details, including price, description, and images.
-Add to Cart: Users can select quantities and add products to their shopping cart.
-Checkout: Proceed to checkout to complete the purchase.
-Technologies Used
-PHP
-MySQL
-HTML/CSS
-JavaScript
-Bootstrap (for responsive design)
-Contributing
-Contributions are welcome! If you have suggestions for improvements or new features, please fork the repository and submit a pull request.
+In database, we created xx table:
 
-License
-This project is licensed under the MIT License. See the LICENSE file for details.
++
++
++
++
++
 
-Thank you for checking out the Flower Shop Web Application! We hope you enjoy browsing our beautiful selection of flowers. Happy shopping! 🌸
+And with some link table with together such as:
+
++
++
++
++
++
+
+And have 2 trigger to create ID for user and order with code here:
+
+```bash
+
+```
