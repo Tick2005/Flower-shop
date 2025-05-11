@@ -220,16 +220,6 @@ unset($_SESSION['message']);
                         <p>Items in Cart</p>
                     </div>
 
-                    <!-- Items in Wishlist -->
-                    <div class="box">
-                        <?php
-                        $stmt = $conn->prepare("SELECT COUNT(id) as count FROM wishlist");
-                        $stmt->execute();
-                        $wishlist_count = $stmt->get_result()->fetch_assoc()['count'];
-                        ?>
-                        <h3><?php echo $wishlist_count; ?></h3>
-                        <p>Items in Wishlist</p>
-                    </div>
 
                     <!-- Registered Customers -->
                     <div class="box">
