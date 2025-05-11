@@ -247,6 +247,7 @@ if (isset($_POST['place_order'])) {
                         <a href="products.php?type=other">Other</a>
                     </div>
                 </div>
+                <a href="./customer.php" class="text-gray-700 hover:text-green-500">Home</a>
                 <div class="relative dropdown">
                     <a href="#" class="text-gray-700 hover:text-green-500 flex items-center space-x-2">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
