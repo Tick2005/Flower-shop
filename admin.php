@@ -53,7 +53,7 @@ unset($_SESSION['message']);
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard - Luxe Blossom</title>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;500;700&family=Roboto:wght@300;400&display=swap" rel="stylesheet">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
     <style>
         * {
             margin: 0;
@@ -63,7 +63,7 @@ unset($_SESSION['message']);
         }
 
         body {
-            background: #f8f1e9;
+            background: #f5f5f5;
             color: #4a3c31;
             padding-top: 100px;
         }
@@ -71,11 +71,15 @@ unset($_SESSION['message']);
         .container {
             display: flex;
             min-height: 100vh;
+            flex-direction: column;
         }
 
         .main-content {
             flex: 1;
             padding: 40px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
         }
 
         .dashboard h1 {
@@ -90,20 +94,22 @@ unset($_SESSION['message']);
             display: grid;
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
+            justify-content: center;
         }
 
         .box {
-            background: #fff;
+            background: rgba(255, 255, 255, 0.95);
+            backdrop-filter: blur(10px);
             padding: 20px;
             border-radius: 10px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
             text-align: center;
-            transition: transform 0.3s, box-shadow 0.3s;
+            transition: transform 0.3s;
+            max-width: 300px;
         }
 
         .box:hover {
             transform: translateY(-5px);
-            box-shadow: 0 6px 25px rgba(0, 0, 0, 0.15);
         }
 
         .box h3 {
@@ -123,26 +129,41 @@ unset($_SESSION['message']);
             position: fixed;
             top: 20px;
             right: 20px;
-            background: #b89b72;
-            color: #4a3c31;
+            background: #f8d7da;
+            color: #721c24;
             padding: 15px;
             border-radius: 5px;
-            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
             font-weight: 500;
             z-index: 1000;
+            animation: slideIn 0.5s ease-out;
+        }
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
+        }
+
+        .message.hide {
+            animation: slideOut 0.5s ease-out forwards;
+        }
+
+        @keyframes slideOut {
+            from { transform: translateX(0); }
+            to { transform: translateX(100%); opacity: 0; }
         }
 
         @media (max-width: 768px) {
-            .container {
-                flex-direction: column;
-            }
-
             .main-content {
                 padding: 20px;
             }
 
             .box-container {
                 grid-template-columns: 1fr;
+            }
+
+            .box {
+                max-width: 100%;
             }
         }
     </style>
@@ -153,6 +174,9 @@ unset($_SESSION['message']);
         <main class="main-content">
             <section class="dashboard">
                 <h1>Admin Dashboard</h1>
+                <?php if (!empty($message)): ?>
+                    <div class="message"><?php echo htmlspecialchars($message); ?></div>
+                <?php endif; ?>
                 <div class="box-container">
                     <!-- Pending Orders -->
                     <div class="box">
@@ -220,7 +244,6 @@ unset($_SESSION['message']);
                         <p>Items in Cart</p>
                     </div>
 
-
                     <!-- Registered Customers -->
                     <div class="box">
                         <?php
@@ -270,7 +293,10 @@ unset($_SESSION['message']);
     </div>
     <script>
         setTimeout(() => {
-            document.querySelectorAll('.message').forEach(msg => msg.remove());
+            document.querySelectorAll('.message').forEach(msg => msg.classList.add('hide'));
+            setTimeout(() => {
+                document.querySelectorAll('.message').forEach(msg => msg.remove());
+            }, 500);
         }, 3000);
     </script>
 </body>
