@@ -297,7 +297,6 @@ if (isset($_POST['logout'])) {
                     </a>
                     <div class="dropdown-menu absolute">
                         <a href="customer_info.php" class="block">My Account</a>
-                        <a href="logout.php" class="block">Logout</a>
                         <form method="POST" action="">
                             <button type="submit" name="logout" class="block w-full text-left px-4 py-2 text-gray-700 hover:bg-green-100">Logout</button>
                         </form>
@@ -352,7 +351,7 @@ if (isset($_POST['logout'])) {
                                             <input type="checkbox" name="cart_ids[]" value="<?php echo $item['id']; ?>" class="item-checkbox">
                                         </td>
                                         <td class="py-4">
-                                            <img src="<?php echo htmlspecialchars($item['image']); ?>" alt="<?php echo htmlspecialchars($item['name']); ?>" class="w-16 h-16 object-cover rounded">
+                                            <img src="image/<?php echo htmlspecialchars($item['image']); ?>" alt="<?php echo htmlspecialchars($item['name']); ?>" class="w-16 h-16 object-cover rounded">
                                         </td>
                                         <td class="py-4"><?php echo htmlspecialchars($item['name']); ?></td>
                                         <td class="py-4">
