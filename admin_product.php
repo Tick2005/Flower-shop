@@ -2,7 +2,6 @@
 ob_start(); // Start output buffering
 session_start();
 include 'connection.php';
-include 'admin_header.php';
 
 $timeout_duration = 600; // 10 minutes
 if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY']) > $timeout_duration) {
@@ -188,12 +187,15 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
         .container {
             display: flex;
             min-height: 100vh;
+            flex-direction: column;
         }
 
         .main-content {
             flex: 1;
             padding: 40px;
-            margin-left: 250px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 0 auto;
         }
 
         .add-products form {
@@ -203,7 +205,7 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
             border-radius: 10px;
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
             max-width: 600px;
-            margin: 0 auto;
+            margin: 0 auto 40px auto;
         }
 
         .add-products h1 {
@@ -271,6 +273,7 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
             grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
             gap: 20px;
             margin-top: 40px;
+            justify-content: center;
         }
 
         .show-products .box {
@@ -281,6 +284,7 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
             text-align: center;
             transition: transform 0.3s;
+            max-width: 300px;
         }
 
         .show-products .box:hover {
@@ -380,33 +384,45 @@ if (isset($_POST['update_product']) && isset($_POST['csrf_token']) && $_POST['cs
             box-shadow: 0 4px 30px rgba(0, 0, 0, 0.1);
             font-weight: 500;
             z-index: 1000;
+            animation: slideIn 0.5s ease-out;
         }
-        .menu-toggle {
-            display: none;
+
+        @keyframes slideIn {
+            from { transform: translateX(100%); }
+            to { transform: translateX(0); }
         }
+
+        .message.hide {
+            animation: slideOut 0.5s ease-out forwards;
+        }
+
+        @keyframes slideOut {
+            from { transform: translateX(0); }
+            to { transform: translateX(100%); opacity: 0; }
+        }
+
         @media (max-width: 768px) {
-            .container {
-                flex-direction: column;
-            }
-            .menu-toggle {
-            display: block;
-            }
             .main-content {
                 padding: 20px;
-                margin-left: 0;
             }
 
             .add-products form {
                 max-width: 100%;
+                padding: 20px;
             }
 
             .show-products .box-container {
                 grid-template-columns: 1fr;
             }
+
+            .show-products .box {
+                max-width: 100%;
+            }
         }
     </style>
 </head>
 <body>
+    <?php include 'admin_header.php'; ?>
     <div class="container">
         <main class="main-content">
             <?php
