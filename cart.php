@@ -134,6 +134,40 @@ if (isset($_POST['logout'])) {
         exit();
     }
 }
+
+// Handle add to cart
+$message = [];
+if (isset($_POST['add_to_cart']) && $user_id) {
+    $pid = filter_var($_POST['pid'], FILTER_SANITIZE_NUMBER_INT);
+    $name = mysqli_real_escape_string($conn, filter_var($_POST['name'], FILTER_SANITIZE_STRING));
+    $price = filter_var($_POST['price'], FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
+    $image = mysqli_real_escape_string($conn, filter_var($_POST['image'], FILTER_SANITIZE_STRING));
+    $quantity = filter_var($_POST['quantity'], FILTER_SANITIZE_NUMBER_INT);
+
+    // Validate inputs
+    if ($pid <= 0 || $quantity <= 0 || $price < 0) {
+        $message[] = "Invalid product or quantity!";
+    } else {
+        // Check if product is already in cart
+        $stmt = $conn->prepare("SELECT id FROM cart WHERE user_id = ? AND pid = ?");
+        $stmt->bind_param("ii", $user_id, $pid);
+        $stmt->execute();
+        if ($stmt->get_result()->num_rows > 0) {
+            $message[] = "Product already in cart!";
+        } else {
+            // Add product to cart
+            $stmt = $conn->prepare("INSERT INTO cart (user_id, pid, name, price, quantity, image) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("iisdis", $user_id, $pid, $name, $price, $quantity, $image);
+            if ($stmt->execute()) {
+                $message[] = "Product added to cart!";
+                $cart_count++;
+            } else {
+                $message[] = "Failed to add product to cart.";
+            }
+        }
+    }
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -256,7 +290,7 @@ if (isset($_POST['logout'])) {
     <header class="header bg-green-50 shadow-md sticky top-0 z-50">
         <div class="container mx-auto px-4 py-4 flex justify-between items-center">
             <div class="flex items-center space-x-6">
-                <a href="/" class="text-2xl font-bold text-green-600">Flora & Life</a>
+                <a href="customer.php" class="text-2xl font-bold text-green-600">Flora & Life</a>
                 <div class="contact-info">
                     
                     <div class="flex items-center gap-1">
@@ -278,14 +312,14 @@ if (isset($_POST['logout'])) {
             <nav class="nav-links flex space-x-6 items-center">
                 <!-- Dropdown for Products -->
                 <div class="relative dropdown">
-                    <a href="product.php" class="text-gray-700 hover:text-green-500">Products</a>
+                    <a href="products.php" class="text-gray-700 hover:text-green-500">Products</a>
                     <div class="dropdown-menu absolute">
-                        <a href="product.php" class="block">Birthday Flowers</a>
-                        <a href="product.php" class="block">Wedding Flowers</a>
-                        <a href="product.php" class="block">Condolence Flowers</a>
-                        <a href="product.php" class="block">Bouquets</a>
-                        <a href="product.php" class="block">Baskets</a>
-                        <a href="product.php" class="block">Other</a>
+                        <a href="products.php?type=birthday" class="block">Birthday Flowers</a>
+                        <a href="products.php?type=wedding" class="block">Wedding Flowers</a>
+                        <a href="products.php?type=condolence" class="block">Condolence Flowers</a>
+                        <a href="products.php?type=bouquet" class="block">Bouquets</a>
+                        <a href="products.php?type=basket" class="block">Baskets</a>
+                        <a href="products.php?type=other" class="block">Other</a>
                     </div>
                 </div>
                 <div class="relative dropdown">
@@ -391,7 +425,7 @@ if (isset($_POST['logout'])) {
                                 <p class="text-lg font-bold">Total: <?php echo number_format($total_price, 2, ',', '.'); ?>$</p>
                             </div>
                             <div>
-                                <a href="customer.php" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 mr-2">Continue Shopping</a>
+                                <a href="products.php" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 mr-2">Continue Shopping</a>
                                 <button type="button" id="select-all-btn" onclick="toggleSelectAll()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mr-2">Select All</button>
                                 <button type="submit" name="checkout_selected" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Proceed to Checkout</button>
                             </div>
@@ -406,35 +440,35 @@ if (isset($_POST['logout'])) {
         <div class="container mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
             <div>
                 <h3 class="text-lg font-bold mb-4">Contact Us</h3>
-                <p class="mb-2">Flower Shop</p>
+                <p class="mb-2">Flora & Life</p>
                 <p class="mb-2">123 Flower Street, City, Country</p>
                 <p class="mb-2">Phone: +123 456 7890</p>
-                <p>Email: support@flowershop.com</p>
+                <p>Email: support@florandlife.com</p>
             </div>
             <div>
                 <h3 class="text-lg font-bold mb-4">Quick Links</h3>
                 <ul class="space-y-2">
-                    <li><a href="login.php" class="hover:text-green-300">Products</a></li>
-                    <li><a href="login.php" class="hover:text-green-300">Login</a></li>
-                    <li><a href="register.php" class="hover:text-green-300">Sign up</a></li>
+                    <li><a href="products.php" class="hover:text-green-300">Products</a></li>
+                    <li><a href="customer_info.php" class="hover:text-green-300">My Account</a></li>
+                    <li><form method="POST"><button type="submit" name="logout" class="hover:text-green-300 text-left">Logout</button></form></li>
                 </ul>
             </div>
             <div>
                 <h3 class="text-lg font-bold mb-4">Follow Us</h3>
                 <div class="flex space-x-4">
                     <a href="https://facebook.com" class="hover:text-green-300">
-                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M9 8h-3v4h3v12h5v-12h3.642l.358-4h-4v-1.667c0-.955.192-1.333 1.115-1.333h2.885v-5h-3.808c-3.596 0-5.192 1.583-5.192 4.615v3.385z"/>
                         </svg>
                     </a>
                     <a href="https://twitter.com" class="hover:text-green-300">
-                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
                         </svg>
                     </a>
                     <a href="https://instagram.com" class="hover:text-green-300">
-                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
-                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.947-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.948-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.948-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
                         </svg>
                     </a>
                 </div>
