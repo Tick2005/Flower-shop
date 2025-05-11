@@ -7,7 +7,7 @@ $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : null;
 $user_name = isset($_SESSION['user_name']) ? $_SESSION['user_name'] : 'Guest';
 
 // Session timeout
-$timeout_duration = 1800; // 30 minutes
+$timeout_duration = 1800;
 if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY']) > $timeout_duration) {
     session_unset();
     session_destroy();
@@ -60,6 +60,9 @@ if (isset($_POST['add_to_cart']) && $user_id) {
         if (isset($_GET['type'])) {
             $redirect_url .= '?type=' . urlencode($_GET['type']);
         }
+        if (isset($_GET['search'])) {
+            $redirect_url .= (parse_url($redirect_url, PHP_URL_QUERY) ? '&' : '?') . 'search=' . urlencode($_GET['search']);
+        }
         $redirect_url .= (parse_url($redirect_url, PHP_URL_QUERY) ? '&' : '?') . 'added=true';
         header("Location: $redirect_url");
         exit();
@@ -73,17 +76,30 @@ if (isset($_GET['added']) && $_GET['added'] === 'true') {
     $message[] = "Product added to cart successfully!";
 }
 
-// Function to fetch products by type
-function fetchProducts($conn, $type = null) {
+// Function to fetch products by type and search term
+function fetchProducts($conn, $type = null, $search = null) {
     $products = [];
-    $query = "SELECT id, name, price, sale, product_detail, image, origin, type FROM products";
+    $query = "SELECT id, name, price, sale, product_detail, image, origin, type FROM products WHERE 1=1";
+    $params = [];
+    $types = '';
+
     if ($type) {
-        $query .= " WHERE type = ?";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("s", $type);
-    } else {
-        $stmt = $conn->prepare($query);
+        $query .= " AND type = ?";
+        $params[] = $type;
+        $types .= 's';
     }
+
+    if ($search) {
+        $query .= " AND name LIKE ?";
+        $params[] = "%$search%";
+        $types .= 's';
+    }
+
+    $stmt = $conn->prepare($query);
+    if (!empty($params)) {
+        $stmt->bind_param($types, ...$params);
+    }
+
     $stmt->execute();
     $result = $stmt->get_result();
     while ($row = $result->fetch_assoc()) {
@@ -103,9 +119,10 @@ $category_map = [
     'other' => 'Other'
 ];
 
-// Get selected type from query parameter
+// Get selected type and search term from query parameters
 $selected_type = isset($_GET['type']) ? filter_var($_GET['type'], FILTER_SANITIZE_STRING) : null;
-$products = fetchProducts($conn, $selected_type);
+$search_term = isset($_GET['search']) ? trim(filter_var($_GET['search'], FILTER_SANITIZE_STRING)) : null;
+$products = fetchProducts($conn, $selected_type, $search_term);
 
 // Define types for filtering
 $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
@@ -116,7 +133,7 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Products - Flower Shop</title>
+    <title>Products - Flora & Life</title>
     <link rel="stylesheet" href="style1.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"/>
@@ -133,10 +150,12 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
             padding: 1rem;
             text-align: center;
-            transition: transform 0.2s;
+            transition: transform 0.3s ease, box-shadow 0.3s ease;
+            cursor: pointer;
         }
         .product-card:hover {
-            transform: scale(1.05);
+            transform: translateY(-5px);
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
         .product-card img {
             width: 100%;
@@ -178,7 +197,6 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
             background-color: #16a34a;
             color: white;
         }
-
         .dropdown {
             position: relative;
         }
@@ -295,12 +313,84 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
             align-items: center;
             gap: 0.5rem;
         }
-        .product-card {
-            transition: transform 0.3s ease, box-shadow 0.3s ease;
+        /* Search Bar Styling */
+        .search-bar form {
+            position: relative;
+            width: 100%;
         }
-        .product-card:hover {
-            transform: translateY(-5px);
-            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        .search-bar input {
+            width: 100%;
+            padding: 0.5rem 2.5rem;
+            border: 2px solid #d1d5db;
+            border-radius: 9999px;
+            background-color: #f9fafb;
+            font-size: 0.875rem;
+            color: #1f2937;
+            transition: all 0.3s ease;
+        }
+        .search-bar input:focus {
+            outline: none;
+            border-color: #16a34a;
+            box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+        }
+        .search-bar input:hover {
+            border-color: #16a34a;
+        }
+        .search-bar .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6b7280;
+        }
+        .search-bar .clear-icon {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6b7280;
+            cursor: pointer;
+            display: none;
+        }
+        .search-bar input:not(:placeholder-shown) + .search-icon + .clear-icon {
+            display: block;
+        }
+        .search-bar .clear-icon:hover {
+            color: #16a34a;
+        }
+        /* Modal Styling */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background-color: rgba(0, 0, 0, 0.5);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-content {
+            background-color: white;
+            border-radius: 0.5rem;
+            max-width: 90%;
+            max-height: 90%;
+            overflow-y: auto;
+            position: relative;
+            padding: 2rem;
+            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
+        }
+        .modal-close {
+            position: absolute;
+            top: 1rem;
+            right: 1rem;
+            font-size: 1.5rem;
+            cursor: pointer;
+            color: #4b5563;
+        }
+        .modal-close:hover {
+            color: #16a34a;
         }
         @media (max-width: 640px) {
             .quantity-selector {
@@ -321,6 +411,13 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
             form.actions-form {
                 gap: 0.25rem;
             }
+            .search-bar {
+                width: 100%;
+            }
+            .modal-content {
+                padding: 1rem;
+                max-width: 95%;
+            }
         }
     </style>
 </head>
@@ -337,12 +434,14 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
                 </div>
             </div>
             <div class="search-bar w-1/3">
-                <div class="relative">
-                    <input type="text" placeholder="Search flowers..." class="w-full pl-10 pr-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:border-green-500">
-                    <svg class="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                </div>
+                <form method="GET" action="products.php">
+                    <input type="text" name="search" placeholder="Search flowers by name..." value="<?php echo htmlspecialchars($search_term); ?>" class="w-full">
+                    <i class="fas fa-search search-icon"></i>
+                    <i class="fas fa-times clear-icon" onclick="this.previousElementSibling.value='';this.style.display='none';"></i>
+                    <?php if ($selected_type): ?>
+                        <input type="hidden" name="type" value="<?php echo htmlspecialchars($selected_type); ?>">
+                    <?php endif; ?>
+                </form>
             </div>
             <nav class="nav-links flex space-x-6 items-center">
                 <div class="relative dropdown">
@@ -387,12 +486,22 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
 
     <main class="py-12 bg-gray-100">
         <div class="container mx-auto px-4">
-            <h2 class="text-2xl font-bold text-white text-center bg-green-800 py-4 mb-8 rounded">Our Products</h2>
+            <h2 class="text-2xl font-bold text-white text-center bg-green-800 py-4 mb-8 rounded">
+                <?php
+                if ($search_term) {
+                    echo 'Search Results for "' . htmlspecialchars($search_term) . '"';
+                } elseif ($selected_type) {
+                    echo htmlspecialchars($category_map[$selected_type]);
+                } else {
+                    echo 'Our Products';
+                }
+                ?>
+            </h2>
 
             <div class="category-links">
-                <a href="products.php" class="<?php echo !$selected_type ? 'active' : ''; ?>">All</a>
+                <a href="products.php<?php echo $search_term ? '?search=' . urlencode($search_term) : ''; ?>" class="<?php echo !$selected_type ? 'active' : ''; ?>">All</a>
                 <?php foreach ($types as $type): ?>
-                    <a href="products.php?type=<?php echo urlencode($type); ?>" class="<?php echo $selected_type === $type ? 'active' : ''; ?>">
+                    <a href="products.php?type=<?php echo urlencode($type); ?><?php echo $search_term ? '&search=' . urlencode($search_term) : ''; ?>" class="<?php echo $selected_type === $type ? 'active' : ''; ?>">
                         <?php echo htmlspecialchars($category_map[$type]); ?>
                     </a>
                 <?php endforeach; ?>
@@ -405,11 +514,11 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
             <?php endif; ?>
 
             <?php if (empty($products)): ?>
-                <p class="text-gray-600 text-center">No products available in this category.</p>
+                <p class="text-gray-600 text-center">No products found<?php echo $search_term ? ' for "' . htmlspecialchars($search_term) . '"' : ($selected_type ? ' in this category' : ''); ?>.</p>
             <?php else: ?>
                 <div class="product-grid">
                     <?php foreach ($products as $product): ?>
-                        <div class="product-card">
+                        <div class="product-card" data-product-id="<?php echo $product['id']; ?>">
                             <img src="image/<?php echo htmlspecialchars($product['image']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>">
                             <h3><?php echo htmlspecialchars($product['name']); ?></h3>
                             <p>Category: <?php echo htmlspecialchars($category_map[$product['type']]); ?></p>
@@ -433,7 +542,7 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
                                     <button type="button" class="quantity-increment" aria-label="Increase quantity">+</button>
                                 </div>
                                 <button type="submit" name="add_to_cart" aria-label="Add to cart">
-                                    <i class="fas fa-shopping-cart"></i>
+                                    <i class="fas fa-shopping-cart"></i> Add to Cart
                                 </button>
                             </form>
                         </div>
@@ -442,6 +551,16 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
             <?php endif; ?>
         </div>
     </main>
+
+    <!-- Product Detail Modal -->
+    <div id="productModal" class="modal">
+        <div class="modal-content">
+            <span class="modal-close">×</span>
+            <div id="modalContent" class="text-center">
+                <p>Loading...</p>
+            </div>
+        </div>
+    </div>
 
     <footer class="bg-green-800 text-white py-8">
         <div class="container mx-auto px-4 grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -486,25 +605,98 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
         </div>
     </footer>
 
-    <script src="script.js"></script>
     <script>
-        document.querySelectorAll('.quantity-selector').forEach(selector => {
-            const decrement = selector.querySelector('.quantity-decrement');
-            const increment = selector.querySelector('.quantity-increment');
-            const input = selector.querySelector('.quantity-input');
-
-            decrement.addEventListener('click', () => {
-                if (input.value > 1) input.value--;
-            });
-
-            increment.addEventListener('click', () => {
-                input.value++;
-            });
+        // Mobile menu toggle
+        document.getElementById('menu-toggle').addEventListener('click', () => {
+            document.querySelector('.nav-links').classList.toggle('hidden');
         });
 
+        // Quantity selector functionality
+        function attachQuantityListeners() {
+            document.querySelectorAll('.quantity-selector').forEach(selector => {
+                const decrement = selector.querySelector('.quantity-decrement');
+                const increment = selector.querySelector('.quantity-increment');
+                const input = selector.querySelector('.quantity-input');
+
+                decrement.addEventListener('click', () => {
+                    if (input.value > 1) input.value--;
+                });
+
+                increment.addEventListener('click', () => {
+                    input.value++;
+                });
+
+                input.addEventListener('change', () => {
+                    if (input.value < 1) input.value = 1;
+                });
+            });
+        }
+        attachQuantityListeners();
+
+        // Search clear button functionality
+        document.querySelector('.search-bar input').addEventListener('input', function() {
+            const clearIcon = this.nextElementSibling.nextElementSibling;
+            clearIcon.style.display = this.value ? 'block' : 'none';
+        });
+
+        // Submit search form on Enter key
+        document.querySelector('.search-bar input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                this.form.submit();
+            }
+        });
+
+        // Fade out messages
         setTimeout(() => {
             document.querySelectorAll('.message').forEach(msg => msg.remove());
         }, 3000);
+
+        // Modal functionality
+        const modal = document.getElementById('productModal');
+        const modalContent = document.getElementById('modalContent');
+        const modalClose = document.querySelector('.modal-close');
+
+        document.querySelectorAll('.product-card').forEach(card => {
+            card.addEventListener('click', (event) => {
+                // Prevent modal from opening if clicking on form elements
+                if (event.target.closest('.actions-form')) {
+                    return;
+                }
+                const productId = card.getAttribute('data-product-id');
+                modalContent.innerHTML = '<p>Loading...</p>';
+                modal.style.display = 'flex';
+
+                // Fetch product details
+                fetch(`product_detail.php?pid=${productId}`)
+                    .then(response => response.text())
+                    .then(data => {
+                        modalContent.innerHTML = data;
+                        // Re-attach quantity selector listeners for modal content
+                        attachQuantityListeners();
+                    })
+                    .catch(error => {
+                        modalContent.innerHTML = '<p>Error loading product details.</p>';
+                        console.error('Error:', error);
+                    });
+            });
+        });
+
+        modalClose.addEventListener('click', () => {
+            modal.style.display = 'none';
+        });
+
+        window.addEventListener('click', (event) => {
+            if (event.target === modal) {
+                modal.style.display = 'none';
+            }
+        });
+
+        // Close modal with Esc key
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && modal.style.display === 'flex') {
+                modal.style.display = 'none';
+            }
+        });
     </script>
 </body>
 </html>
