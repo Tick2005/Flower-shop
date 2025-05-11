@@ -82,7 +82,14 @@ $stmt->execute();
 $cart_count = $stmt->get_result()->fetch_assoc()['count'];
 
 // Fetch recent orders (for dashboard)
-$stmt = $conn->prepare("SELECT id, total_products, total_price, placed_on FROM orders WHERE user_id = ? ORDER BY placed_on DESC LIMIT 3");
+$stmt = $conn->prepare("
+    SELECT o.id, p.name as product_name, o.total_price, o.placed_on 
+    FROM orders o 
+    JOIN products p ON o.product_id = p.id 
+    WHERE o.user_id = ? 
+    ORDER BY o.placed_on DESC 
+    LIMIT 3
+");
 $stmt->bind_param("i", $user_id);
 $stmt->execute();
 $recent_orders = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -91,7 +98,14 @@ $recent_orders = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 $orders_per_page = 5;
 $page = isset($_GET['order_page']) ? (int)$_GET['order_page'] : 1;
 $offset = ($page - 1) * $orders_per_page;
-$stmt = $conn->prepare("SELECT id, total_products, total_price, placed_on, payment_status, admin_approval FROM orders WHERE user_id = ? ORDER BY placed_on DESC LIMIT ? OFFSET ?");
+$stmt = $conn->prepare("
+    SELECT o.id, p.name as product_name, o.total_price, o.placed_on, o.payment_status, o.admin_approval 
+    FROM orders o 
+    JOIN products p ON o.product_id = p.id 
+    WHERE o.user_id = ? 
+    ORDER BY o.placed_on DESC 
+    LIMIT ? OFFSET ?
+");
 $stmt->bind_param("iii", $user_id, $orders_per_page, $offset);
 $stmt->execute();
 $orders = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -118,9 +132,8 @@ if (isset($_POST['submit_review'])) {
         $review_message[] = "Invalid review data!";
     } else {
         // Check if user has ordered this product
-        $stmt = $conn->prepare("SELECT id FROM orders WHERE user_id = ? AND total_products LIKE ?");
-        $product_like = "%" . $product_id . "%";
-        $stmt->bind_param("is", $user_id, $product_like);
+        $stmt = $conn->prepare("SELECT id FROM orders WHERE user_id = ? AND product_id = ?");
+        $stmt->bind_param("ii", $user_id, $product_id);
         $stmt->execute();
         if ($stmt->get_result()->num_rows > 0) {
             // Check if review already exists
@@ -149,7 +162,14 @@ if (isset($_POST['submit_review'])) {
 $reviews_per_page = 5;
 $review_page = isset($_GET['review_page']) ? (int)$_GET['review_page'] : 1;
 $review_offset = ($review_page - 1) * $reviews_per_page;
-$stmt = $conn->prepare("SELECT r.id, r.product_id, r.message, r.rating, r.created_at, p.name as product_name, p.image FROM reviews r JOIN products p ON r.product_id = p.id WHERE r.user_id = ? ORDER BY r.created_at DESC LIMIT ? OFFSET ?");
+$stmt = $conn->prepare("
+    SELECT r.id, r.product_id, r.message, r.rating, r.created_at, p.name as product_name, p.image 
+    FROM reviews r 
+    JOIN products p ON r.product_id = p.id 
+    WHERE r.user_id = ? 
+    ORDER BY r.created_at DESC 
+    LIMIT ? OFFSET ?
+");
 $stmt->bind_param("iii", $user_id, $reviews_per_page, $review_offset);
 $stmt->execute();
 $reviews = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
@@ -367,7 +387,7 @@ if (isset($_POST['logout'])) {
             </div>
             <div class="search-bar w-1/3">
                 <div class="relative">
-                    <input type="text" placeholder="Search flowers..." class="w-full pl-10 pr-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:border-green-500">
+                    <input type="text" placeholder="Search flowers..." class="w-full pl- Antipasti, pr-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:border-green-500">
                     <svg class="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                         <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
                     </svg>
@@ -375,7 +395,7 @@ if (isset($_POST['logout'])) {
             </div>
             <nav class="nav-links flex space-x-6 items-center">
                 <div class="relative dropdown">
-                    <a href="products.php" class="text-gray-700 hover:text-green-500">Products</a>
+                    <a href="products.php" class="text-gray-7 Antipasti, hover:text-green-500">Products</a>
                     <div class="dropdown-menu">
                         <a href="products.php?type=birthday">Birthday Flowers</a>
                         <a href="products.php?type=wedding">Wedding Flowers</a>
@@ -465,7 +485,7 @@ if (isset($_POST['logout'])) {
                             <thead>
                                 <tr>
                                     <th>Order ID</th>
-                                    <th>Products</th>
+                                    <th>Product</th>
                                     <th>Total Price</th>
                                     <th>Placed On</th>
                                 </tr>
@@ -474,7 +494,7 @@ if (isset($_POST['logout'])) {
                                 <?php foreach ($recent_orders as $order): ?>
                                     <tr>
                                         <td><?php echo htmlspecialchars($order['id']); ?></td>
-                                        <td><?php echo htmlspecialchars($order['total_products']); ?></td>
+                                        <td><?php echo htmlspecialchars($order['product_name']); ?></td>
                                         <td><?php echo number_format($order['total_price'], 2, ',', '.'); ?>$</td>
                                         <td><?php echo date('d-m-Y', strtotime($order['placed_on'])); ?></td>
                                     </tr>
@@ -495,7 +515,7 @@ if (isset($_POST['logout'])) {
                             <thead>
                                 <tr>
                                     <th>Order ID</th>
-                                    <th>Products</th>
+                                    <th>Product</th>
                                     <th>Total Price</th>
                                     <th>Placed On</th>
                                     <th>Payment Status</th>
@@ -506,7 +526,7 @@ if (isset($_POST['logout'])) {
                                 <?php foreach ($orders as $order): ?>
                                     <tr>
                                         <td><?php echo htmlspecialchars($order['id']); ?></td>
-                                        <td><?php echo htmlspecialchars($order['total_products']); ?></td>
+                                        <td><?php echo htmlspecialchars($order['product_name']); ?></td>
                                         <td><?php echo number_format($order['total_price'], 2, ',', '.'); ?>$</td>
                                         <td><?php echo date('d-m-Y H:i', strtotime($order['placed_on'])); ?></td>
                                         <td><?php echo htmlspecialchars($order['payment_status']); ?></td>
@@ -532,7 +552,12 @@ if (isset($_POST['logout'])) {
                         <select name="product_id" id="product_id" class="form-input" required>
                             <option value="">Select a product</option>
                             <?php
-                            $stmt = $conn->prepare("SELECT DISTINCT p.id, p.name FROM products p JOIN cart c ON p.id = c.pid WHERE c.user_id = ?");
+                            $stmt = $conn->prepare("
+                                SELECT DISTINCT p.id, p.name 
+                                FROM products p 
+                                JOIN orders o ON p.id = o.product_id 
+                                WHERE o.user_id = ?
+                            ");
                             $stmt->bind_param("i", $user_id);
                             $stmt->execute();
                             $products = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
