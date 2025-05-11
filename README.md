@@ -1,4 +1,5 @@
-#Flower Shop Web Application
+# Flower Shop Web Application
+
 Welcome to the Flower Shop Web Application! This project is a fully functional online flower shop that allows users to browse, purchase, and manage their flower orders. Below is a brief overview of the application, its features, and how to get started.
 
 Table of Contents
