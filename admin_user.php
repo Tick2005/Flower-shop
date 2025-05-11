@@ -179,6 +179,7 @@ if (isset($_POST['update_user']) && isset($_POST['csrf_token']) && $_POST['csrf_
         .manage-user h1 {
             font-family: 'Playfair Display', serif;
             font-size: 2.5rem;
+            margin-top:50px;
             color: #4a3c31;
             margin-bottom: 30px;
             text-align: center;
