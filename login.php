@@ -45,7 +45,6 @@ function validate_password($password) {
 $timeout_duration = 600; // 10 minutes
 if (isset($_SESSION['LAST_ACTIVITY']) && (time() - $_SESSION['LAST_ACTIVITY']) > $timeout_duration) {
     error_log("Session timeout detected for session: " . session_id());
-    // Set user status to Offline before destroying session
     $user_id = isset($_SESSION['user_id']) ? $_SESSION['user_id'] : (isset($_SESSION['admin_id']) ? $_SESSION['admin_id'] : null);
     if ($user_id) {
         setUserOffline($conn, $user_id);
@@ -73,7 +72,7 @@ if (isset($_POST['submit-btn'])) {
             $message[] = $password_validation;
         } else {
             try {
-                $stmt = $conn->prepare("SELECT id, name, email, password, user_type FROM users WHERE email = ?");
+                $stmt = $conn->prepare("SELECT id, name, email, password, user_type, verified FROM users WHERE email = ?");
                 $stmt->bind_param("s", $email);
                 $stmt->execute();
                 $result = $stmt->get_result();
@@ -84,31 +83,34 @@ if (isset($_POST['submit-btn'])) {
                     error_log("Input password: $password");
                     error_log("Stored hash: " . $row['password']);
                     if (password_verify($password, $row['password'])) {
-                        session_regenerate_id(true);
-                        // Update user status to Online
-                        $stmt = $conn->prepare("UPDATE users SET status = 'Online', updated_at = NOW() WHERE id = ?");
-                        $stmt->bind_param("i", $row['id']);
-                        $stmt->execute();
-                        error_log("User ID {$row['id']} status set to Online");
-
-                        // Set session variables based on user type
-                        if ($row['user_type'] === 'admin') {
-                            $_SESSION['admin_id'] = $row['id'];
-                            $_SESSION['admin_name'] = $row['name'];
-                            $_SESSION['admin_email'] = $row['email'];
-                            error_log("Redirecting to admin.php");
-                            header('Location: admin.php');
-                            exit();
-                        } elseif ($row['user_type'] === 'user') {
-                            $_SESSION['user_id'] = $row['id'];
-                            $_SESSION['user_name'] = $row['name'];
-                            $_SESSION['user_email'] = $row['email'];
-                            error_log("Session set: user_id = " . $_SESSION['user_id']);
-                            header('Location: customer.php');
-                            exit();
+                        if ($row['verified'] == 0) {
+                            $message[] = 'Tài khoản chưa được kích hoạt! Vui lòng kiểm tra email để kích hoạt!';
+                            error_log("Login failed: Account not verified for email $email");
                         } else {
-                            $message[] = 'Invalid user type.';
-                            error_log("Invalid user type: " . $row['user_type']);
+                            session_regenerate_id(true);
+                            $stmt = $conn->prepare("UPDATE users SET status = 'Online', updated_at = NOW() WHERE id = ?");
+                            $stmt->bind_param("i", $row['id']);
+                            $stmt->execute();
+                            error_log("User ID {$row['id']} status set to Online");
+
+                            if ($row['user_type'] === 'admin') {
+                                $_SESSION['admin_id'] = $row['id'];
+                                $_SESSION['admin_name'] = $row['name'];
+                                $_SESSION['admin_email'] = $row['email'];
+                                error_log("Redirecting to admin.php");
+                                header('Location: admin.php');
+                                exit();
+                            } elseif ($row['user_type'] === 'user') {
+                                $_SESSION['user_id'] = $row['id'];
+                                $_SESSION['user_name'] = $row['name'];
+                                $_SESSION['user_email'] = $row['email'];
+                                error_log("Session set: user_id = " . $_SESSION['user_id']);
+                                header('Location: customer.php');
+                                exit();
+                            } else {
+                                $message[] = 'Invalid user type.';
+                                error_log("Invalid user type: " . $row['user_type']);
+                            }
                         }
                     } else {
                         $message[] = 'Incorrect email or password.';
@@ -202,7 +204,6 @@ ob_end_flush();
             box-shadow: 0 2px 10px rgba(124, 196, 126, 0.3); 
         }
 
-
         .input-box i {
             position: absolute;
             top: 50%;
@@ -279,7 +280,6 @@ ob_end_flush();
                 font-size: 1.8rem;
             }
         }
-
     </style>
 </head>
 <body>
