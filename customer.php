@@ -38,16 +38,33 @@ if ($product_type && !in_array($product_type, $valid_types)) {
     $product_type = '';
 }
 
-// Fetch products based on type or all products, limited to 12
-$sql = "SELECT id, name, price, sale, image, type FROM products";
+// Handle search query
+$search_term = isset($_GET['search']) ? trim(filter_var($_GET['search'], FILTER_SANITIZE_STRING)) : '';
+
+// Fetch products based on type, search, or all products, limited to 12
+$sql = "SELECT id, name, price, sale, image, type FROM products WHERE 1=1";
+$params = [];
+$types = '';
+
 if ($product_type) {
-    $sql .= " WHERE type = ?";
+    $sql .= " AND type = ?";
+    $params[] = $product_type;
+    $types .= 's';
 }
+
+if ($search_term) {
+    $sql .= " AND name LIKE ?";
+    $params[] = "%$search_term%";
+    $types .= 's';
+}
+
 $sql .= " LIMIT 12";
 $stmt = $conn->prepare($sql);
-if ($product_type) {
-    $stmt->bind_param("s", $product_type);
+
+if (!empty($params)) {
+    $stmt->bind_param($types, ...$params);
 }
+
 $stmt->execute();
 $products = $stmt->get_result()->fetch_all(MYSQLI_ASSOC);
 
@@ -259,6 +276,51 @@ if (isset($_POST['logout'])) {
         .modal-close:hover {
             color: #16a34a;
         }
+        /* Search Bar Styling */
+        .search-bar form {
+            position: relative;
+            width: 100%;
+        }
+        .search-bar input {
+            width: 100%;
+            padding: 0.5rem 2.5rem;
+            border: 2px solid #d1d5db;
+            border-radius: 9999px;
+            background-color: #f9fafb;
+            font-size: 0.875rem;
+            color: #1f2937;
+            transition: all 0.3s ease;
+        }
+        .search-bar input:focus {
+            outline: none;
+            border-color: #16a34a;
+            box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
+        }
+        .search-bar input:hover {
+            border-color: #16a34a;
+        }
+        .search-bar .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6b7280;
+        }
+        .search-bar .clear-icon {
+            position: absolute;
+            right: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: #6b7280;
+            cursor: pointer;
+            display: none;
+        }
+        .search-bar input:not(:placeholder-shown) + .search-icon + .clear-icon {
+            display: block;
+        }
+        .search-bar .clear-icon:hover {
+            color: #16a34a;
+        }
         /* Responsive Adjustments */
         @media (max-width: 640px) {
             .quantity-selector {
@@ -278,6 +340,9 @@ if (isset($_POST['logout'])) {
             }
             form.actions-form {
                 gap: 0.25rem;
+            }
+            .search-bar {
+                width: 100%;
             }
         }
     </style>
@@ -304,12 +369,14 @@ if (isset($_POST['logout'])) {
                 </div>
             </div>
             <div class="search-bar w-1/3">
-                <div class="relative">
-                    <input type="text" placeholder="Search flowers..." class="w-full pl-10 pr-4 py-2 rounded-full border border-gray-300 focus:outline-none focus:border-green-500">
-                    <svg class="w-5 h-5 absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path>
-                    </svg>
-                </div>
+                <form method="GET" action="customer.php">
+                    <input type="text" name="search" placeholder="Search flowers by name..." value="<?php echo htmlspecialchars($search_term); ?>" class="w-full">
+                    <i class="fas fa-search search-icon"></i>
+                    <i class="fas fa-times clear-icon" onclick="this.previousElementSibling.value='';this.style.display='none';"></i>
+                    <?php if ($product_type): ?>
+                        <input type="hidden" name="type" value="<?php echo htmlspecialchars($product_type); ?>">
+                    <?php endif; ?>
+                </form>
             </div>
             <nav class="nav-links flex space-x-6 items-center">
                 <div class="relative dropdown">
@@ -384,10 +451,20 @@ if (isset($_POST['logout'])) {
         <section class="py-16 bg-gray-50">
             <div class="container mx-auto px-4">
                 <div class="text-center mb-12">
-                    <h2 class="text-4xl font-extrabold text-gray-800 mb-4">Our Products</h2>
+                    <h2 class="text-4xl font-extrabold text-gray-800 mb-4">
+                        <?php
+                        if ($search_term) {
+                            echo 'Search Results for "' . htmlspecialchars($search_term) . '"';
+                        } elseif ($product_type) {
+                            echo ucfirst($product_type) . ' Flowers';
+                        } else {
+                            echo 'Our Products';
+                        }
+                        ?>
+                    </h2>
                 </div>
                 <?php if (empty($products)): ?>
-                    <p class="text-center text-gray-600 text-lg">No products found in this category.</p>
+                    <p class="text-center text-gray-600 text-lg">No products found<?php echo $search_term ? ' for "' . htmlspecialchars($search_term) . '"' : ($product_type ? ' in this category' : ''); ?>.</p>
                 <?php else: ?>
                     <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-8">
                         <?php foreach ($products as $product): ?>
@@ -438,6 +515,7 @@ if (isset($_POST['logout'])) {
             </div>
         </section>
 
+        <!-- Rest of the sections (About Us, Favorite Flowers, Services, Footer) remain unchanged -->
         <section class="py-12 bg-green-50">
             <div class="container mx-auto px-4">
                 <h2 class="text-4xl font-bold text-green-800 text-center mb-8">About Us</h2>
@@ -583,7 +661,7 @@ if (isset($_POST['logout'])) {
                     </a>
                     <a href="https://instagram.com" class="hover:text-green-300">
                         <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.948-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.948-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-1.791 0-3.582-.725-4.879-2.022s-2.022-3.088-2.022-4.879 0-3.582.725-4.879 3.088-2.022 4.879-2.022 3.582.725 4.879 2.022 2.022 3.088 2.022 4.879 0 3.582-.725 4.879-3.088 2.022-4.879 2.022zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
                         </svg>
                     </a>
                 </div>
@@ -660,6 +738,19 @@ if (isset($_POST['logout'])) {
         window.addEventListener('click', (event) => {
             if (event.target === modal) {
                 modal.style.display = 'none';
+            }
+        });
+
+        // Search clear button functionality
+        document.querySelector('.search-bar input').addEventListener('input', function() {
+            const clearIcon = this.nextElementSibling.nextElementSibling;
+            clearIcon.style.display = this.value ? 'block' : 'none';
+        });
+
+        // Submit search form on Enter key
+        document.querySelector('.search-bar input').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                this.form.submit();
             }
         });
     </script>
