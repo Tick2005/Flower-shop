@@ -269,7 +269,9 @@ CREATE TABLE `users` (
   `status` enum('Online','Offline') NOT NULL DEFAULT 'Offline',
   `user_type` enum('user','admin') NOT NULL DEFAULT 'user',
   `created_at` datetime DEFAULT current_timestamp(),
-  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp()
+  `updated_at` datetime DEFAULT current_timestamp() ON UPDATE current_timestamp(),
+  `verification_code` varchar(32) DEFAULT NULL,
+  `verified` tinyint(1) DEFAULT 0
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_general_ci;
 
 --
