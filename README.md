@@ -81,7 +81,7 @@ Follow these steps to set up the project locally:
 ### 1. Clone the Repository
 
 ```bash
-git clone [https://github.com/yourusername/flower-shop.git](https://github.com/Tick2005/Flower-shop)
+git clone [https://github.com/Tick2005/Flower-shop.git](https://github.com/Tick2005/Flower-shop.git)
 cd flower-shop
 ```
 
