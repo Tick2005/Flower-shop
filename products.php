@@ -225,6 +225,10 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
         }
         .message {
             animation: fadeOut 3s forwards;
+            color: white; /* Thay đổi màu chữ thành trắng */
+            background-color: green; /* Thêm nền để đảm bảo độ tương phản */
+            padding: 0.5rem;
+            border-radius: 0.375rem;
         }
         @keyframes fadeOut {
             0% { opacity: 1; }
