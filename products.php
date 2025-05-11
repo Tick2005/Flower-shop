@@ -27,6 +27,52 @@ function getCartCount($conn, $user_id) {
 }
 $cart_count = getCartCount($conn, $user_id);
 
+// Handle adding to cart
+$message = [];
+if (isset($_POST['add_to_cart']) && $user_id) {
+    $product_id = filter_var($_POST['product_id'], FILTER_SANITIZE_NUMBER_INT);
+    $quantity = filter_var($_POST['quantity'], FILTER_SANITIZE_NUMBER_INT, FILTER_NULL_ON_FAILURE) ?: 1;
+    if ($quantity < 1) $quantity = 1;
+
+    $stmt = $conn->prepare("SELECT name, image, price, sale FROM products WHERE id = ?");
+    $stmt->bind_param("i", $product_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows > 0) {
+        $product = $result->fetch_assoc();
+        $stmt = $conn->prepare("SELECT quantity FROM cart WHERE user_id = ? AND pid = ?");
+        $stmt->bind_param("ii", $user_id, $product_id);
+        $stmt->execute();
+        $result = $stmt->get_result();
+        if ($result->num_rows > 0) {
+            $row = $result->fetch_assoc();
+            $new_quantity = $row['quantity'] + $quantity;
+            $stmt = $conn->prepare("UPDATE cart SET quantity = ? WHERE user_id = ? AND pid = ?");
+            $stmt->bind_param("iii", $new_quantity, $user_id, $product_id);
+            $stmt->execute();
+        } else {
+            $stmt = $conn->prepare("INSERT INTO cart (user_id, pid, name, image, quantity) VALUES (?, ?, ?, ?, ?)");
+            $stmt->bind_param("iissi", $user_id, $product_id, $product['name'], $product['image'], $quantity);
+            $stmt->execute();
+        }
+        // Redirect to the same page with a query parameter to show the message
+        $redirect_url = 'products.php';
+        if (isset($_GET['type'])) {
+            $redirect_url .= '?type=' . urlencode($_GET['type']);
+        }
+        $redirect_url .= (parse_url($redirect_url, PHP_URL_QUERY) ? '&' : '?') . 'added=true';
+        header("Location: $redirect_url");
+        exit();
+    } else {
+        $message[] = "Product not found.";
+    }
+}
+
+// Check if the product was added (from query parameter)
+if (isset($_GET['added']) && $_GET['added'] === 'true') {
+    $message[] = "Product added to cart successfully!";
+}
+
 // Function to fetch products by type
 function fetchProducts($conn, $type = null) {
     $products = [];
@@ -133,7 +179,6 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
             color: white;
         }
 
-        /* Dropdown styling */
         .dropdown {
             position: relative;
         }
@@ -178,7 +223,6 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
         .dropdown-menu a:hover, .dropdown-menu button:hover {
             background-color: #f0fdf4;
         }
-        /* Message Styling */
         .message {
             animation: fadeOut 3s forwards;
         }
@@ -187,7 +231,6 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
             80% { opacity: 1; }
             100% { opacity: 0; display: none; }
         }
-        /* Quantity Selector */
         .quantity-selector {
             display: flex;
             align-items: center;
@@ -196,6 +239,7 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
             background-color: #f9fafb;
             height: 36px;
             width: fit-content;
+            margin: 0.5rem auto;
         }
         .quantity-decrement, .quantity-increment {
             padding: 0.5rem;
@@ -224,9 +268,9 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
             -webkit-appearance: none;
             margin: 0;
         }
-        /* Cart Button */
         button[name="add_to_cart"] {
-            width: 36px;
+            width: auto;
+            padding: 0.5rem 1rem;
             height: 36px;
             display: flex;
             align-items: center;
@@ -236,16 +280,17 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
             background-color: #16a34a;
             color: white;
             transition: background-color 0.2s ease;
+            margin-top: 0.5rem;
         }
         button[name="add_to_cart"]:hover {
             background-color: #15803d;
         }
         form.actions-form {
             display: flex;
+            flex-direction: column;
             align-items: center;
             gap: 0.5rem;
         }
-        /* Product Card */
         .product-card {
             transition: transform 0.3s ease, box-shadow 0.3s ease;
         }
@@ -253,41 +298,6 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
             transform: translateY(-5px);
             box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
         }
-        /* Modal Styling */
-        .modal {
-            display: none;
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            background-color: rgba(0, 0, 0, 0.5);
-            z-index: 1000;
-            align-items: center;
-            justify-content: center;
-        }
-        .modal-content {
-            background-color: white;
-            border-radius: 0.5rem;
-            max-width: 90%;
-            max-height: 90%;
-            overflow-y: auto;
-            position: relative;
-            padding: 2rem;
-            box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.3);
-        }
-        .modal-close {
-            position: absolute;
-            top: 1rem;
-            right: 1rem;
-            font-size: 1.5rem;
-            cursor: pointer;
-            color: #4b5563;
-        }
-        .modal-close:hover {
-            color: #16a34a;
-        }
-        /* Responsive Adjustments */
         @media (max-width: 640px) {
             .quantity-selector {
                 height: 32px;
@@ -301,7 +311,7 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
                 font-size: 0.875rem;
             }
             button[name="add_to_cart"] {
-                width: 32px;
+                padding: 0.25rem 0.75rem;
                 height: 32px;
             }
             form.actions-form {
@@ -384,6 +394,12 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
                 <?php endforeach; ?>
             </div>
 
+            <?php if (!empty($message)): ?>
+                <?php foreach ($message as $msg): ?>
+                    <div class="message text-center text-green-500 mb-4"><?php echo htmlspecialchars($msg); ?></div>
+                <?php endforeach; ?>
+            <?php endif; ?>
+
             <?php if (empty($products)): ?>
                 <p class="text-gray-600 text-center">No products available in this category.</p>
             <?php else: ?>
@@ -401,11 +417,21 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
                                 ?>$
                                 <?php if ($product['sale'] > 0): ?>
                                     <span class="text-red-500 line-through">
-                                        <?php echo number_format($product['price'], 2, ',', ','); ?>đ
+                                        <?php echo number_format($product['price'], 2, ',', ','); ?>$
                                     </span>
                                 <?php endif; ?>
                             </p>
-                            <a href="customer.php?pid=<?php echo $product['id']; ?>" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Add to Cart</a>
+                            <form class="actions-form" method="POST">
+                                <input type="hidden" name="product_id" value="<?php echo $product['id']; ?>">
+                                <div class="quantity-selector">
+                                    <button type="button" class="quantity-decrement" aria-label="Decrease quantity">-</button>
+                                    <input type="number" name="quantity" value="1" min="1" class="quantity-input">
+                                    <button type="button" class="quantity-increment" aria-label="Increase quantity">+</button>
+                                </div>
+                                <button type="submit" name="add_to_cart" aria-label="Add to cart">
+                                    <i class="fas fa-shopping-cart"></i>
+                                </button>
+                            </form>
                         </div>
                     <?php endforeach; ?>
                 </div>
@@ -457,5 +483,24 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
     </footer>
 
     <script src="script.js"></script>
+    <script>
+        document.querySelectorAll('.quantity-selector').forEach(selector => {
+            const decrement = selector.querySelector('.quantity-decrement');
+            const increment = selector.querySelector('.quantity-increment');
+            const input = selector.querySelector('.quantity-input');
+
+            decrement.addEventListener('click', () => {
+                if (input.value > 1) input.value--;
+            });
+
+            increment.addEventListener('click', () => {
+                input.value++;
+            });
+        });
+
+        setTimeout(() => {
+            document.querySelectorAll('.message').forEach(msg => msg.remove());
+        }, 3000);
+    </script>
 </body>
 </html>
