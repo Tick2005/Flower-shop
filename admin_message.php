@@ -161,6 +161,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['review_id'], $_POST['
         .reviews h1 {
             font-family: 'Playfair Display', serif;
             font-size: 2.5rem;
+            margin-top:50px;
             color: #4a3c31;
             margin-bottom: 30px;
             text-align: center;
