@@ -38,7 +38,6 @@ function fetchCartItems($conn, $user_id) {
         $discounted_price = $row['price'] * (100 - $row['sale']) / 100;
         $total_price += $discounted_price * $row['quantity'];
     }
-    $stmt->close();
     return ['items' => $cart_items, 'total_price' => $total_price];
 }
 
@@ -48,86 +47,127 @@ $cart_items = $cart_data['items'];
 $total_price = $cart_data['total_price'];
 $cart_count = count($cart_items);
 
-// Handle quantity updates and item removal
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+// Handle increase quantity
+$message = [];
+if (isset($_POST['increase_quantity'])) {
     $cart_id = filter_var($_POST['cart_id'], FILTER_SANITIZE_NUMBER_INT);
-    $action = $_POST['action'];
-
-    // Fetch current quantity
     $stmt = $conn->prepare("SELECT quantity FROM cart WHERE id = ? AND user_id = ?");
     $stmt->bind_param("ii", $cart_id, $user_id);
     $stmt->execute();
     $result = $stmt->get_result();
-
     if ($result->num_rows > 0) {
         $row = $result->fetch_assoc();
-        $current_quantity = $row['quantity'];
-
-        if ($action === 'increase') {
-            $new_quantity = $current_quantity + 1;
-            $stmt = $conn->prepare("UPDATE cart SET quantity = ? WHERE id = ? AND user_id = ?");
-            $stmt->bind_param("iii", $new_quantity, $cart_id, $user_id);
-            if ($stmt->execute() && $stmt->affected_rows > 0) {
-                $message[] = "Quantity increased successfully!";
-            } else {
-                $message[] = "Failed to increase quantity.";
-                error_log("Increase failed: Cart ID: $cart_id, User ID: $user_id");
-            }
-        } elseif ($action === 'decrease') {
-            $new_quantity = $current_quantity - 1;
-            if ($new_quantity <= 0) {
-                // Remove item if quantity would be 0
-                $stmt = $conn->prepare("DELETE FROM cart WHERE id = ? AND user_id = ?");
-                $stmt->bind_param("ii", $cart_id, $user_id);
-                if ($stmt->execute() && $stmt->affected_rows > 0) {
-                    $message[] = "Item removed from cart as quantity reached 0!";
-                } else {
-                    $message[] = "Failed to remove item.";
-                    error_log("Remove failed: Cart ID: $cart_id, User ID: $user_id");
-                }
-            } else {
-                // Update quantity
-                $stmt = $conn->prepare("UPDATE cart SET quantity = ? WHERE id = ? AND user_id = ?");
-                $stmt->bind_param("iii", $new_quantity, $cart_id, $user_id);
-                if ($stmt->execute() && $stmt->affected_rows > 0) {
-                    $message[] = "Quantity decreased successfully!";
-                } else {
-                    $message[] = "Failed to decrease quantity.";
-                    error_log("Decrease failed: Cart ID: $cart_id, User ID: $user_id");
-                }
-            }
-        } elseif ($action === 'remove') {
-            $stmt = $conn->prepare("DELETE FROM cart WHERE id = ? AND user_id = ?");
-            $stmt->bind_param("ii", $cart_id, $user_id);
-            if ($stmt->execute() && $stmt->affected_rows > 0) {
-                $message[] = "Item removed from cart!";
-            } else {
-                $message[] = "Failed to remove item.";
-                error_log("Remove failed: Cart ID: $cart_id, User ID: $user_id");
-            }
+        $new_quantity = $row['quantity'] + 1;
+        $stmt = $conn->prepare("UPDATE cart SET quantity = ? WHERE id = ? AND user_id = ?");
+        $stmt->bind_param("iii", $new_quantity, $cart_id, $user_id);
+        if ($stmt->execute() && $stmt->affected_rows > 0) {
+            $message[] = "Quantity increased successfully!";
+            header("Location: cart.php");
+            exit();
+        } else {
+            $message[] = "Failed to increase quantity.";
+            error_log("Increase failed: Cart ID: $cart_id, User ID: $user_id");
         }
-        $stmt->close();
     } else {
         $message[] = "Item not found.";
     }
+}
 
-    // Refresh cart data after modification
-    $cart_data = fetchCartItems($conn, $user_id);
-    $cart_items = $cart_data['items'];
-    $total_price = $cart_data['total_price'];
-    $cart_count = count($cart_items);
+// Handle decrease quantity
+if (isset($_POST['decrease_quantity'])) {
+    $cart_id = filter_var($_POST['cart_id'], FILTER_SANITIZE_NUMBER_INT);
+    $stmt = $conn->prepare("SELECT quantity FROM cart WHERE id = ? AND user_id = ?");
+    $stmt->bind_param("ii", $cart_id, $user_id);
+    $stmt->execute();
+    $result = $stmt->get_result();
+    if ($result->num_rows > 0) {
+        $row = $result->fetch_assoc();
+        $new_quantity = $row['quantity'] - 1;
+        if ($new_quantity < 1) {
+            $new_quantity = 1; // Prevent quantity from going below 1
+        }
+        $stmt = $conn->prepare("UPDATE cart SET quantity = ? WHERE id = ? AND user_id = ?");
+        $stmt->bind_param("iii", $new_quantity, $cart_id, $user_id);
+        if ($stmt->execute() && $stmt->affected_rows > 0) {
+            $message[] = "Quantity decreased successfully!";
+            header("Location: cart.php");
+            exit();
+        } else {
+            $message[] = "Failed to decrease quantity.";
+            error_log("Decrease failed: Cart ID: $cart_id, User ID: $user_id");
+        }
+    } else {
+        $message[] = "Item not found.";
+    }
+}
+
+// Handle remove item
+if (isset($_POST['remove_item'])) {
+    $cart_id = filter_var($_POST['cart_id'], FILTER_SANITIZE_NUMBER_INT);
+    $stmt = $conn->prepare("DELETE FROM cart WHERE id = ? AND user_id = ?");
+    $stmt->bind_param("ii", $cart_id, $user_id);
+    if ($stmt->execute() && $stmt->affected_rows > 0) {
+        $message[] = "Item removed from cart!";
+        header("Location: cart.php");
+        exit();
+    } else {
+        $message[] = "Failed to remove item. Item may not exist.";
+        error_log("Remove failed: Cart ID: $cart_id, User ID: $user_id");
+    }
 }
 
 // Handle logout
 if (isset($_POST['logout'])) {
-    $stmt = $conn->prepare("UPDATE users SET status='Offline' WHERE id=?");
-    $stmt->bind_param("i", $user_id);
-    $stmt->execute();
-    $stmt->close();
-    session_destroy();
-    header("Location: index.php");
-    exit();
+    try {
+        $stmt = $conn->prepare("UPDATE users SET status = 'Offline', updated_at = NOW() WHERE id = ?");
+        $stmt->bind_param("i", $user_id);
+        $stmt->execute();
+        error_log("Admin ID $user_id status set to Offline due to logout");
+        session_unset();
+        session_destroy();
+        header('Location: index.php');
+        exit();
+    } catch (Exception $e) {
+        $_SESSION['message'] = 'Failed to logout: ' . htmlspecialchars($e->getMessage());
+        error_log("Error during logout (ID: $user_id): " . $e->getMessage());
+        header('Location: ' . $_SERVER['PHP_SELF']);
+        exit();
+    }
 }
+
+// Handle add to cart
+$message = [];
+if (isset($_POST['add_to_cart']) && $user_id) {
+    $pid = filter_var($_POST['pid'], FILTER_SANITIZE_NUMBER_INT);
+    $name = mysqli_real_escape_string($conn, filter_var($_POST['name'], FILTER_SANITIZE_STRING));
+    $price = filter_var($_POST['price'], FILTER_SANITIZE_NUMBER_FLOAT, FILTER_FLAG_ALLOW_FRACTION);
+    $image = mysqli_real_escape_string($conn, filter_var($_POST['image'], FILTER_SANITIZE_STRING));
+    $quantity = filter_var($_POST['quantity'], FILTER_SANITIZE_NUMBER_INT);
+
+    // Validate inputs
+    if ($pid <= 0 || $quantity <= 0 || $price < 0) {
+        $message[] = "Invalid product or quantity!";
+    } else {
+        // Check if product is already in cart
+        $stmt = $conn->prepare("SELECT id FROM cart WHERE user_id = ? AND pid = ?");
+        $stmt->bind_param("ii", $user_id, $pid);
+        $stmt->execute();
+        if ($stmt->get_result()->num_rows > 0) {
+            $message[] = "Product already in cart!";
+        } else {
+            // Add product to cart
+            $stmt = $conn->prepare("INSERT INTO cart (user_id, pid, name, price, quantity, image) VALUES (?, ?, ?, ?, ?, ?)");
+            $stmt->bind_param("iisdis", $user_id, $pid, $name, $price, $quantity, $image);
+            if ($stmt->execute()) {
+                $message[] = "Product added to cart!";
+                $cart_count++;
+            } else {
+                $message[] = "Failed to add product to cart.";
+            }
+        }
+    }
+}
+
 ?>
 
 <!DOCTYPE html>
@@ -135,7 +175,7 @@ if (isset($_POST['logout'])) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Shopping Cart - Flora & Life</title>
+    <title>Shopping Cart - Flower Shop</title>
     <link rel="stylesheet" href="style1.css">
     <script src="https://cdn.tailwindcss.com"></script>
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css"/>
@@ -143,42 +183,38 @@ if (isset($_POST['logout'])) {
         .quantity-controls {
             display: flex;
             align-items: center;
-            justify-content: center;
+            justify-content: center; /* Căn giữa theo chiều ngang */
             gap: 0.5rem;
-            width: 100%;
+            width: 100%; /* Đảm bảo chiếm toàn bộ chiều rộng của ô */
         }
         .quantity-controls button {
             background-color: #e5e7eb;
             color: #374151;
-            padding: 0.25rem 0.75rem;
+            padding: 0.25rem 0.75rem; /* Tăng padding để nút đồng đều */
             border-radius: 0.25rem;
             border: none;
             cursor: pointer;
             font-size: 1rem;
-            min-width: 2rem;
+            min-width: 2rem; /* Đặt độ rộng tối thiểu để tránh co ngót */
             text-align: center;
-            transition: background-color 0.2s ease;
         }
         .quantity-controls button:hover {
             background-color: #d1d5db;
         }
-        .quantity-controls button:active {
-            background-color: #9ca3af;
-        }
         .quantity-controls span {
-            width: 2.5rem;
+            width: 2.5rem; /* Tăng độ rộng để số lượng hiển thị rõ */
             text-align: center;
-            display: inline-block;
+            display: inline-block; /* Đảm bảo span không bị ảnh hưởng bởi nội dung */
         }
         table {
             width: 100%;
             border-collapse: collapse;
-            margin: 0 auto;
+            margin: 0 auto; /* Căn giữa bảng */
         }
         th, td {
             padding: 1rem;
-            text-align: center;
-            vertical-align: middle;
+            text-align: center; /* Căn giữa nội dung trong ô */
+            vertical-align: middle; /* Căn giữa theo chiều dọc */
         }
         th {
             background-color: #f9fafb;
@@ -189,7 +225,7 @@ if (isset($_POST['logout'])) {
         }
         td img {
             display: block;
-            margin: 0 auto;
+            margin: 0 auto; /* Căn giữa hình ảnh */
         }
         .action-btn {
             background-color: #ef4444;
@@ -199,11 +235,12 @@ if (isset($_POST['logout'])) {
             border-radius: 0.25rem;
             cursor: pointer;
             text-align: center;
-            display: inline-block;
+            display: inline-block; /* Đảm bảo nút không bị lệch */
         }
         .action-btn:hover {
             background-color: #dc2626;
         }
+
         .dropdown {
             position: relative;
         }
@@ -248,72 +285,6 @@ if (isset($_POST['logout'])) {
         .dropdown-menu a:hover, .dropdown-menu button:hover {
             background-color: #f0fdf4;
         }
-        .search-bar form {
-            position: relative;
-            width: 100%;
-        }
-        .search-bar input {
-            width: 100%;
-            padding: 0.5rem 2.5rem;
-            border: 2px solid #d1d5db;
-            border-radius: 9999px;
-            background-color: #f9fafb;
-            font-size: 0.875rem;
-            color: #1f2937;
-            transition: all 0.3s ease;
-        }
-        .search-bar input:focus {
-            outline: none;
-            border-color: #16a34a;
-            box-shadow: 0 0 0 3px rgba(22, 163, 74, 0.1);
-        }
-        .search-bar input:hover {
-            border-color: #16a34a;
-        }
-        .search-bar .search-icon {
-            position: absolute;
-            left: 0.75rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #6b7280;
-        }
-        .search-bar .clear-icon {
-            position: absolute;
-            right: 0.75rem;
-            top: 50%;
-            transform: translateY(-50%);
-            color: #6b7280;
-            cursor: pointer;
-            display: none;
-        }
-        .search-bar input:not(:placeholder-shown) + .search-icon + .clear-icon {
-            display: block;
-        }
-        .search-bar .clear-icon:hover {
-            color: #16a34a;
-        }
-        .message {
-            animation: fadeOut 3s forwards;
-            color: white;
-            background-color: #16a34a;
-            padding: 0.5rem;
-            border-radius: 0.375rem;
-            text-align: center;
-        }
-        @keyframes fadeOut {
-            0% { opacity: 1; }
-            80% { opacity: 1; }
-            100% { opacity: 0; display: none; }
-        }
-        @media (max-width: 640px) {
-            .search-bar {
-                width: 100%;
-            }
-            .quantity-controls button {
-                padding: 0.2rem 0.5rem;
-                font-size: 0.9rem;
-            }
-        }
     </style>
 </head>
 <body>
@@ -327,13 +298,6 @@ if (isset($_POST['logout'])) {
                         <span>0976491322</span>
                     </div>
                 </div>
-            </div>
-            <div class="search-bar w-1/3">
-                <form method="GET" action="products.php">
-                    <input type="text" name="search" placeholder="Search flowers by name..." class="w-full">
-                    <i class="fas fa-search search-icon"></i>
-                    <i class="fas fa-times clear-icon" onclick="this.previousElementSibling.value='';this.style.display='none';"></i>
-                </form>
             </div>
             <nav class="nav-links flex space-x-6 items-center">
                 <div class="relative dropdown">
@@ -383,7 +347,7 @@ if (isset($_POST['logout'])) {
 
             <?php if (!empty($message)): ?>
                 <?php foreach ($message as $msg): ?>
-                    <div class="message"><?php echo htmlspecialchars($msg); ?></div>
+                    <div class="message text-center text-yellow-500 mb-4"><?php echo htmlspecialchars($msg); ?></div>
                 <?php endforeach; ?>
             <?php endif; ?>
 
@@ -417,32 +381,29 @@ if (isset($_POST['logout'])) {
                                         <td class="py-4">
                                             <?php 
                                             $discounted_price = $item['price'] * (100 - $item['sale']) / 100;
-                                            echo number_format($discounted_price, 3, ',', '.'); 
+                                            echo number_format($discounted_price, 2, ',', '.'); 
                                             ?>$
                                         </td>
                                         <td class="py-4">
                                             <div class="quantity-controls">
                                                 <form action="cart.php" method="POST">
                                                     <input type="hidden" name="cart_id" value="<?php echo $item['id']; ?>">
-                                                    <input type="hidden" name="action" value="decrease">
-                                                    <button type="submit" class="decrease-btn">-</button>
+                                                    <button type="submit" name="decrease_quantity">-</button>
                                                 </form>
                                                 <span><?php echo $item['quantity']; ?></span>
                                                 <form action="cart.php" method="POST">
                                                     <input type="hidden" name="cart_id" value="<?php echo $item['id']; ?>">
-                                                    <input type="hidden" name="action" value="increase">
-                                                    <button type="submit" class="increase-btn">+</button>
+                                                    <button type="submit" name="increase_quantity">+</button>
                                                 </form>
                                             </div>
                                         </td>
                                         <td class="py-4">
-                                            <?php echo number_format($discounted_price * $item['quantity'], 3, ',', '.'); ?>$
+                                            <?php echo number_format($discounted_price * $item['quantity'], 2, ',', '.'); ?>$
                                         </td>
                                         <td class="py-4">
                                             <form action="cart.php" method="POST">
                                                 <input type="hidden" name="cart_id" value="<?php echo $item['id']; ?>">
-                                                <input type="hidden" name="action" value="remove">
-                                                <button type="submit" class="action-btn">Delete</button>
+                                                <button type="submit" name="remove_item" style="background-color: #ef4444; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer;">Delete</button>
                                             </form>
                                         </td>
                                     </tr>
@@ -451,14 +412,12 @@ if (isset($_POST['logout'])) {
                         </table>
                         <div class="mt-6 flex justify-between items-center">
                             <div>
-                                <p class="text-lg font-bold">Total: <?php echo number_format($total_price, 3, ',', '.'); ?>$</p>
+                                <p class="text-lg font-bold">Total: <?php echo number_format($total_price, 2, ',', '.'); ?>$</p>
                             </div>
-                        </div>
-                        <div class="mt-6 flex justify-between items-center">
                             <div>
-                                <a href="customer.php" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 mr-2">Continue Shopping</a>
+                                <a href="products.php" class="bg-gray-500 text-white px-4 py-2 rounded hover:bg-gray-600 mr-2">Continue Shopping</a>
                                 <button type="button" id="select-all-btn" onclick="toggleSelectAll()" class="bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600 mr-2">Select All</button>
-                                <button type="submit" id="checkout-btn" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Proceed to Checkout</button>
+                                <button type="submit" name="checkout_selected" class="bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">Proceed to Checkout</button>
                             </div>
                         </div>
                     </form>
@@ -493,65 +452,50 @@ if (isset($_POST['logout'])) {
                         </svg>
                     </a>
                     <a href="https://twitter.com" class="hover:text-green-300">
-                        <a href="https://instagram.com" class="hover:text-green-300">
-                            <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
-                                <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.948-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
-                            </svg>
-                        </a>
-                    </div>
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M18.244 2.25h3.308l-7.227 8.26 8.502 11.24H16.17l-5.214-6.817L4.99 21.75H1.68l7.73-8.835L1.254 2.25H8.08l4.713 6.231zm-1.161 17.52h1.833L7.084 4.126H5.117z"/>
+                        </svg>
+                    </a>
+                    <a href="https://instagram.com" class="hover:text-green-300">
+                        <svg class="w-6 h-6" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2.163c3.204 0 3.584.012 4.85.07 3.252.148 4.771 1.691 4.919 4.919.058 1.265.069 1.645.069 4.849 0 3.205-.012 3.584-.069 4.849-.149 3.225-1.664 4.771-4.919 4.919-1.266.058-1.644.07-4.85.07-3.204 0-3.584-.012-4.849-.07-3.26-.149-4.771-1.699-4.919-4.92-.058-1.265-.07-1.644-.07-4.849 0-3.204.013-3.583.07-4.849.149-3.227 1.664-4.771 4.919-4.919 1.266-.057 1.645-.069 4.849-.069zm0-2.163c-3.259 0-3.667.014-4.947.072-4.358.2-6.78 2.618-6.98 6.98-.059 1.281-.073 1.689-.073 4.948 0 3.259.014 3.668.072 4.948.2 4.358 2.618 6.78 6.98 6.98 1.281.058 1.689.072 4.948.072 3.259 0 3.668-.014 4.948-.072 4.354-.2 6.782-2.618 6.979-6.98.059-1.28.073-1.689.073-4.948 0-3.259-.014-3.667-.072-4.948-.196-4.354-2.617-6.78-6.979-6.98-1.281-.059-1.69-.073-4.949-.073zm0 5.838c-3.403 0-6.162 2.759-6.162 6.162s2.759 6.163 6.162 6.163 6.162-2.759 6.162-6.163c0-3.403-2.759-6.162-6.162-6.162zm0 10.162c-2.209 0-4-1.79-4-4 0-2.209 1.791-4 4-4s4 1.791 4 4c0 2.21-1.791 4-4 4zm6.406-11.845c-.796 0-1.441.645-1.441 1.44s.645 1.44 1.441 1.44c.795 0 1.439-.645 1.439-1.44s-.644-1.44-1.439-1.44z"/>
+                        </svg>
+                    </a>
                 </div>
-                <div class="border-t border-green-700 mt-8 pt-4 text-center">
-                    <p>© 2025 Flora & Life. All rights reserved.</p>
-                </div>
-            </footer>
+            </div>
+        </div>
+        <div class="border-t border-green-700 mt-8 pt-4 text-center">
+            <p>© 2025 Flora & Life. All rights reserved.</p>
+        </div>
+    </footer>
 
-            <script>
-                // Mobile menu toggle
-                document.getElementById('menu-toggle').addEventListener('click', () => {
-                    document.querySelector('.nav-links').classList.toggle('hidden');
-                });
+    <script src="script.js"></script>
+    <script>
+        setTimeout(() => {
+            document.querySelectorAll('.message').forEach(msg => msg.remove());
+        }, 3000);
 
-                // Search clear button functionality
-                document.querySelector('.search-bar input').addEventListener('input', function() {
-                    const clearIcon = this.nextElementSibling.nextElementSibling;
-                    clearIcon.style.display = this.value ? 'block' : 'none';
-                });
+        // Validate form submission
+        document.getElementById('checkout-form').addEventListener('submit', function(e) {
+            const checkboxes = document.querySelectorAll('.item-checkbox:checked');
+            if (checkboxes.length === 0) {
+                e.preventDefault();
+                alert('Please select at least one item to proceed to checkout.');
+            }
+        });
 
-                // Submit search form on Enter key
-                document.querySelector('.search-bar input').addEventListener('keypress', function(e) {
-                    if (e.key === 'Enter') {
-                        this.form.submit();
-                    }
-                });
+        // Toggle Select All functionality
+        function toggleSelectAll() {
+            const checkboxes = document.querySelectorAll('.item-checkbox');
+            const selectAllBtn = document.getElementById('select-all-btn');
+            const allChecked = Array.from(checkboxes).every(checkbox => checkbox.checked);
 
-                // Fade out messages
-                setTimeout(() => {
-                    document.querySelectorAll('.message').forEach(msg => msg.remove());
-                }, 3000);
+            checkboxes.forEach(checkbox => {
+                checkbox.checked = !allChecked;
+            });
 
-                // Validate checkout form submission
-                document.getElementById('checkout-btn').addEventListener('click', function(e) {
-                    const checkboxes = document.querySelectorAll('.item-checkbox:checked');
-                    if (checkboxes.length === 0) {
-                        e.preventDefault();
-                        alert('Please select at least one item to proceed to checkout.');
-                    } else {
-                        document.getElementById('checkout-form').submit();
-                    }
-                });
-
-                // Toggle Select All functionality
-                function toggleSelectAll() {
-                    const checkboxes = document.querySelectorAll('.item-checkbox');
-                    const selectAllBtn = document.getElementById('select-all-btn');
-                    const allChecked = Array.from(checkboxes).every(checkbox => checkbox.checked);
-
-                    checkboxes.forEach(checkbox => {
-                        checkbox.checked = !allChecked;
-                    });
-
-                    selectAllBtn.textContent = allChecked ? 'Select All' : 'Deselect All';
-                }
-            </script>
-        </body>
-    </html>
+            selectAllBtn.textContent = allChecked ? 'Select All' : 'Deselect All';
+        }
+    </script>
+</body>
+</html>
