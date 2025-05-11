@@ -2,32 +2,23 @@
 use PHPMailer\PHPMailer\PHPMailer;
 use PHPMailer\PHPMailer\Exception;
 
-// 
 require __DIR__ . '/src/Exception.php';
 require __DIR__ . '/src/PHPMailer.php';
 require __DIR__ . '/src/SMTP.php';
 
-// 
 session_start();
+
+// Consolidated GET request handling
 if ($_SERVER['REQUEST_METHOD'] === 'GET' && !isset($_GET['cancel'])) {
     unset($_SESSION['reset_email'], $_SESSION['otp'], $_SESSION['otp_verified']);
 }
 
-// 
-if ($_SERVER['REQUEST_METHOD'] === 'GET' && !isset($_GET['cancel'])) {
-    unset($_SESSION['reset_email'], $_SESSION['otp'], $_SESSION['otp_verified']);
-}
-
-// 
 ob_start();
 
-
 $cfg = require __DIR__ . '/config.php';    
-include __DIR__ . '/connection.php';       
+include __DIR__ . '/connection.php';
 
-
-
-// Handle cancel action first to avoid header issues
+// Handle cancel action
 if (isset($_GET['cancel']) && $_GET['cancel'] === 'true') {
     unset($_SESSION['reset_email'], $_SESSION['otp'], $_SESSION['otp_verified']);
     header('Location: forgot.php');
@@ -42,49 +33,25 @@ if (!isset($_SESSION['csrf_token'])) {
 }
 
 // Password validation function
-function validate_password($password) {
-    // Độ dài
-    if (strlen($password) < 8 || strlen($password) > 30) {
-        return "Password must be between 8 and 30 characters!";
+if (!function_exists('validate_password')) {
+    function validate_password($password) {
+        if (strlen($password) < 8 || strlen($password) > 30) {
+            return "Password must be between 8 and 30 characters!";
+        }
+        if (!preg_match('/[!@#$%^&*(),.?":{}|<>]/', $password)) {
+            return "Password must contain at least 1 special character!";
+        }
+        if (!preg_match('/\d/', $password)) {
+            return "Password must contain at least 1 number!";
+        }
+        if (!preg_match('/[A-Z]/', $password)) {
+            return "Password must contain at least 1 uppercase letter!";
+        }
+        return true;
     }
-    // Ký tự đặc biệt (nháy đơn để khỏi phải escape quote)
-    if (!preg_match('/[!@#$%^&*(),.?":{}|<>]/', $password)) {
-        return "Password must contain at least 1 special character!";
-    }
-    // Số
-    if (!preg_match('/\d/', $password)) {
-        return "Password must contain at least 1 number!";
-    }
-    // Chữ hoa
-    if (!preg_match('/[A-Z]/', $password)) {
-        return "Password must contain at least 1 uppercase letter!";
-    }
-    return true;
 }
 
-
 // Handle email check
-//if (isset($_POST['check_email']) && isset($_POST['csrf_token']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
-    //$email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
-    
-    //if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
-        //$message[] = 'Invalid email format!';
-    //} else {
-        //$stmt = $conn->prepare("SELECT id FROM users WHERE email = ?");
-        //$stmt->bind_param("s", $email);
-        //$stmt->execute();
-        //$result = $stmt->get_result();
-        
-        //if ($result->num_rows > 0) {
-            //$_SESSION['reset_email'] = $email;
-            //$_SESSION['captcha'] = rand(100000, 999999); // Generate CAPTCHA
-            //$message[] = 'Please enter the CAPTCHA code: ' . $_SESSION['captcha'];
-        //} else {
-            //$message[] = 'Email not found!';
-        //}
-        //$stmt->close();
-    //}
-//}
 if (isset($_POST['check_email']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
     $email = filter_var($_POST['email'], FILTER_SANITIZE_EMAIL);
     if (filter_var($email, FILTER_VALIDATE_EMAIL)) {
@@ -98,21 +65,29 @@ if (isset($_POST['check_email']) && $_POST['csrf_token'] === $_SESSION['csrf_tok
             $_SESSION['otp'] = $otp;
 
             $mail = new PHPMailer(true);
-            $mail->isSMTP();
-            $mail->Host       = 'smtp.gmail.com';
-            $mail->SMTPAuth   = true;
-            $mail->Username   = $cfg['mail_user'];
-            $mail->Password   = $cfg['mail_pass'];
-            $mail->SMTPSecure = 'tls';
-            $mail->Port       = 587;
-            $mail->setFrom($cfg['mail_user'], 'Flower Shop');
-            $mail->addAddress($email);
-            $mail->isHTML(true);
-            $mail->Subject = 'Password Reset OTP';
-            $mail->Body = "<p>Your OTP is: <strong>{$otp}</strong></p>";
-            //$mail->SMTPDebug = 2; 
-            //$mail->Debugoutput = 'html';
             try {
+                // Server settings
+                $mail->isSMTP();
+                $mail->Host = 'smtp.gmail.com';
+                $mail->SMTPAuth = true;
+                $mail->Username = 'nguyenducanhwasabi@gmail.com'; // Thay bằng email của bạn
+                $mail->Password = 'ickklshjloxyrcik'; 
+                $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                $mail->Port = 587;
+
+                // Sender and recipient
+                $mail->setFrom('nguyenducanhwasabi@gmail.com', 'Flora & Life');
+                $mail->addAddress($email);
+
+                // Content
+                $mail->isHTML(true);
+                $mail->Subject = 'Password Reset OTP';
+                $mail->Body = "<p>Your OTP is: <strong>{$otp}</strong></p>";
+
+                // Enable debugging for troubleshooting
+                // $mail->SMTPDebug = 2;
+                // $mail->Debugoutput = 'html';
+
                 $mail->send();
                 $message[] = 'Your OTP has been successfully sent to your email address.';
             } catch (Exception $e) {
@@ -125,11 +100,10 @@ if (isset($_POST['check_email']) && $_POST['csrf_token'] === $_SESSION['csrf_tok
     } else {
         $message[] = 'Invalid email format!';
     }
-    
 }
 
-// Handle CAPTCHA verification*********************************************************
-if (isset($_POST['verify_otp']) && $_POST['csrf_token']===$_SESSION['csrf_token']) {
+// Handle OTP verification
+if (isset($_POST['verify_otp']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
     $input = trim($_POST['otp']);
     if (isset($_SESSION['otp']) && $input == $_SESSION['otp']) {
         $_SESSION['otp_verified'] = true;
@@ -140,14 +114,14 @@ if (isset($_POST['verify_otp']) && $_POST['csrf_token']===$_SESSION['csrf_token'
 }
 
 // Handle password reset
-if (isset($_POST['reset_password']) && isset($_POST['csrf_token']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
+if (isset($_POST['reset_password']) && $_POST['csrf_token'] === $_SESSION['csrf_token']) {
     if (!isset($_SESSION['otp_verified']) || !$_SESSION['otp_verified']) {
-        $message[] = 'Please verify CAPTCHA first!';
+        $message[] = 'Please verify OTP first!';
     } else {
         $password = $_POST['password'];
         $cpassword = $_POST['cpassword'];
         $email = $_SESSION['reset_email'];
-        
+
         $password_validation = validate_password($password);
         if ($password_validation !== true) {
             $message[] = $password_validation;
@@ -157,7 +131,7 @@ if (isset($_POST['reset_password']) && isset($_POST['csrf_token']) && $_POST['cs
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
             $stmt = $conn->prepare("UPDATE users SET password = ? WHERE email = ?");
             $stmt->bind_param("ss", $hashed_password, $email);
-            
+
             if ($stmt->execute()) {
                 $message[] = 'Password reset successfully!';
                 unset($_SESSION['reset_email'], $_SESSION['otp'], $_SESSION['otp_verified']);
@@ -181,7 +155,7 @@ if (isset($_POST['reset_password']) && isset($_POST['csrf_token']) && $_POST['cs
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
     <style>
-       * {
+         * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
@@ -349,7 +323,7 @@ if (isset($_POST['reset_password']) && isset($_POST['csrf_token']) && $_POST['cs
         </form>
         <?php
         } elseif (isset($_SESSION['reset_email']) && !isset($_SESSION['otp_verified'])) {
-            // CAPTCHA verification form
+            // OTP verification form
         ?>
         <form action="" method="post">
             <h1>Verify OTP</h1>
@@ -405,5 +379,5 @@ if (isset($_POST['reset_password']) && isset($_POST['csrf_token']) && $_POST['cs
 </body>
 </html>
 <?php
-ob_end_flush(); // Flush the output buffer
+ob_end_flush();
 ?>
