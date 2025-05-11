@@ -181,15 +181,15 @@ if (isset($_POST['reset_password']) && isset($_POST['csrf_token']) && $_POST['cs
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.2/css/all.min.css">
     <link href="https://fonts.googleapis.com/css2?family=Roboto&family=Playfair+Display:wght@400;600&display=swap" rel="stylesheet">
     <style>
-        * {
+       * {
             margin: 0;
             padding: 0;
             box-sizing: border-box;
-            font-family: 'Roboto', sans-serif;
+            font-family: 'Segoe UI', sans-serif;
         }
 
         body {
-            background: url('https://images.unsplash.com/photo-1509266272358-7701da638078?ixlib=rb-4.0.3&auto=format&fit=crop&w=1950&q=80') no-repeat center center fixed;
+            background: url('image/background.webp') no-repeat center center fixed;
             background-size: cover;
             display: flex;
             justify-content: center;
@@ -198,42 +198,52 @@ if (isset($_POST['reset_password']) && isset($_POST['csrf_token']) && $_POST['cs
         }
 
         .form-container {
-            background: rgba(255, 255, 255, 0.95);
-            backdrop-filter: blur(10px);
-            padding: 40px;
-            border-radius: 15px;
-            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.2);
-            max-width: 400px;
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(12px);
+            padding: 40px 30px;
+            border-radius: 20px;
+            box-shadow: 0 12px 25px rgba(0, 0, 0, 0.1);
+            max-width: 420px;
             width: 100%;
             text-align: center;
         }
 
         .form-container h1 {
-            font-family: 'Playfair Display', serif;
-            font-size: 2rem;
-            color: #4a3c31;
+            font-size: 2.2rem;
+            color: #2f3e46;
+            font-weight: 600;
             margin-bottom: 20px;
         }
 
         .input-box {
+            margin: 18px 0;
             position: relative;
-            margin: 20px 0;
         }
 
-        .input-box input {
+       .input-box input {
             width: 100%;
-            padding: 12px 15px;
-            border: 1px solid #d4c7b0;
-            border-radius: 5px;
-            background: transparent;
+            padding: 16px 20px; 
+            border: 2px solid #ccc; 
+            border-radius: 12px; 
+            background-color: rgba(255, 255, 255, 0.8); 
             font-size: 1rem;
-            color: #4a3c31;
-            transition: border-color 0.3s;
+            color: #4a4a4a;
+            box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+            transition: all 0.3s ease;
+            font-family: 'Arial', sans-serif; 
         }
 
         .input-box input:focus {
+            border: 2px solid #7cc47e; 
             outline: none;
-            border-color: #b89b72;
+            background-color: #ffffff; 
+            box-shadow: 0 0 8px rgba(124, 196, 126, 0.4); 
+        }
+
+        .input-box input:hover {
+            border: 2px solid #a3c6a0; 
+            background-color: rgba(255, 255, 255, 1); 
+            box-shadow: 0 2px 10px rgba(124, 196, 126, 0.3); 
         }
 
         .input-box i {
@@ -241,53 +251,61 @@ if (isset($_POST['reset_password']) && isset($_POST['csrf_token']) && $_POST['cs
             top: 50%;
             right: 15px;
             transform: translateY(-50%);
-            color: #b89b72;
+            color: #6ca76f;
+        }
+
+        .remember-forgot {
+            display: flex;
+            justify-content: space-between;
+            font-size: 0.85rem;
+            color: #2f3e46;
+            margin: 15px 0;
+        }
+
+        .remember-forgot a {
+            color: #5aaf6f;
+            text-decoration: none;
+        }
+
+        .remember-forgot a:hover {
+            text-decoration: underline;
         }
 
         .message {
-            background: #f8d7da;
-            color: #721c24;
-            padding: 10px;
-            border-radius: 5px;
+            background: #ffe5e5;
+            color: #a94442;
+            padding: 12px;
+            border-radius: 6px;
             margin-bottom: 15px;
             font-size: 0.9rem;
         }
 
         button {
             width: 100%;
-            padding: 12px;
-            background: #b89b72;
+            padding: 14px;
+            background: #6fcf97;
             border: none;
-            border-radius: 5px;
-            color: #fff;
+            border-radius: 8px;
+            color: white;
             font-size: 1rem;
-            font-weight: 500;
+            font-weight: 600;
             cursor: pointer;
-            transition: background 0.3s, transform 0.2s;
+            transition: all 0.3s ease;
         }
 
         button:hover {
-            background: #a68a64;
-            transform: translateY(-2px);
-        }
-
-        .cancel-btn {
-            background: #e57373;
-        }
-
-        .cancel-btn:hover {
-            background: #d32f2f;
-            transform: translateY(-2px);
+            background: #4cae6d;
+            transform: scale(1.02);
         }
 
         .form-container p {
             margin-top: 20px;
             font-size: 0.9rem;
-            color: #4a3c31;
+            color: #2f3e46;
         }
 
         .form-container p a {
-            color: #b89b72;
+            color: #5aaf6f;
             text-decoration: none;
         }
 
@@ -297,11 +315,11 @@ if (isset($_POST['reset_password']) && isset($_POST['csrf_token']) && $_POST['cs
 
         @media (max-width: 480px) {
             .form-container {
-                padding: 20px;
+                padding: 25px 20px;
             }
 
             .form-container h1 {
-                font-size: 2rem;
+                font-size: 1.8rem;
             }
         }
     </style>
