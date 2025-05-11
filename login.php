@@ -84,7 +84,7 @@ if (isset($_POST['submit-btn'])) {
                     error_log("Stored hash: " . $row['password']);
                     if (password_verify($password, $row['password'])) {
                         if ($row['verified'] == 0) {
-                            $message[] = 'Tài khoản chưa được kích hoạt! Vui lòng kiểm tra email để kích hoạt!';
+                            $message[] = 'Account not activated! Please check your email to activate!';
                             error_log("Login failed: Account not verified for email $email");
                         } else {
                             session_regenerate_id(true);
