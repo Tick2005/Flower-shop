@@ -1,14 +1,14 @@
-Flower Shop Web Application
+#Flower Shop Web Application
 Welcome to the Flower Shop Web Application! This project is a fully functional online flower shop that allows users to browse, purchase, and manage their flower orders. Below is a brief overview of the application, its features, and how to get started.
 
 Table of Contents
-Features
-Installation
-Usage
-Technologies Used
-Contributing
-License
-Features
+- Features
+- Installation
+- Usage
+- Technologies Used
+- Contributing
+- License
+- Features
 User Registration and Login: Users can create an account, log in, and manage their profiles.
 Product Catalog: Browse a wide variety of flowers and arrangements categorized by occasion (e.g., birthdays, weddings, condolences).
 Shopping Cart: Add products to the cart, adjust quantities, and proceed to checkout.
