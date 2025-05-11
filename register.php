@@ -2,6 +2,13 @@
 session_start();
 include 'connection.php';
 
+require 'src/PHPMailer.php';
+require 'src/SMTP.php';
+require 'src/Exception.php';
+
+use PHPMailer\PHPMailer\PHPMailer;
+use PHPMailer\PHPMailer\Exception;
+
 $message = [];
 
 function validate_password($password) {
@@ -37,7 +44,7 @@ if (isset($_POST['submit-btn']) && isset($_POST['csrf_token']) && $_POST['csrf_t
         $message[] = $password_validation;
     } else {
         // Check email existence
-        $stmt = $conn->prepare("SELECT * FROM users WHERE email = ?");
+        $stmt = $conn->prepare("SELECT email FROM users WHERE email = ?");
         $stmt->bind_param("s", $email);
         $stmt->execute();
         $result = $stmt->get_result();
@@ -47,18 +54,47 @@ if (isset($_POST['submit-btn']) && isset($_POST['csrf_token']) && $_POST['csrf_t
         } elseif ($password !== $cpassword) {
             $message[] = 'Passwords do not match!';
         } else {
-            // Hash password and insert new user
+            // Hash password and prepare verification code
             $hashed_password = password_hash($password, PASSWORD_DEFAULT);
+            $verification_code = bin2hex(random_bytes(16));
             $default_type = 'user';
             $default_status = 'Offline';
+            $verified = 0;
 
-            $insert_stmt = $conn->prepare("INSERT INTO users (name, email, password, user_type, status) VALUES (?, ?, ?, ?, ?)");
-            $insert_stmt->bind_param("sssss", $name, $email, $hashed_password, $default_type, $default_status);
-            $insert_stmt->execute();
+            $insert_stmt = $conn->prepare("INSERT INTO users (name, email, password, verification_code, verified, user_type, status) VALUES (?, ?, ?, ?, ?, ?, ?)");
+            $insert_stmt->bind_param("sssssss", $name, $email, $hashed_password, $verification_code, $verified, $default_type, $default_status);
 
-            $message[] = 'Registered successfully!';
-            header("Location: login.php?registered=true");
-            exit();
+            if ($insert_stmt->execute()) {
+                $mail = new PHPMailer(true);
+                try {
+                    // Cấu hình SMTP (ví dụ dùng Gmail)
+                    $mail->isSMTP();
+                    $mail->Host = 'smtp.gmail.com';
+                    $mail->SMTPAuth = true;
+                    $mail->Username = 'nguyenducanhwasabi@gmail.com'; // Thay bằng email của bạn
+                    $mail->Password = 'ickklshjloxyrcik';     // Thay bằng App Password
+                    $mail->SMTPSecure = PHPMailer::ENCRYPTION_STARTTLS;
+                    $mail->Port = 587;
+
+                    // Người gửi và nhận
+                    $mail->setFrom('nguyenducanhwasabi@gmail.com', 'Flora&Life');
+                    $mail->addAddress($email);
+
+                    // Nội dung email
+                    $mail->isHTML(true);
+                    $mail->Subject = 'Kích hoạt tài khoản Flower Shop';
+                    $activation_link = "http://localhost/flower-shop/activate.php?email=" . urlencode($email) . "&code=" . $verification_code;
+                    $mail->Body = "Chào {$name}!<br>Xin vui lòng nhấp vào liên kết sau để kích hoạt tài khoản: <a href='$activation_link'>$activation_link</a><br>Trân trọng,<br>Flower Shop";
+
+                    $mail->send();
+                    $message[] = 'Đăng ký thành công! Vui lòng kiểm tra email để kích hoạt tài khoản.';
+                } catch (Exception $e) {
+                    $message[] = 'Đăng ký thành công nhưng gửi email thất bại: ' . $mail->ErrorInfo;
+                }
+            } else {
+                $message[] = 'Đăng ký thất bại! Vui lòng thử lại.';
+            }
+            $insert_stmt->close();
         }
     }
 }
@@ -162,6 +198,15 @@ if (isset($_POST['submit-btn']) && isset($_POST['csrf_token']) && $_POST['csrf_t
             font-size: 0.9rem;
         }
 
+        .success-message {
+            background: #d4edda;
+            color: #155724;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 15px;
+            font-size: 0.9rem;
+        }
+
         button {
             width: 100%;
             padding: 12px;
@@ -230,7 +275,7 @@ if (isset($_POST['submit-btn']) && isset($_POST['csrf_token']) && $_POST['csrf_t
             <?php
             if (!empty($message)) {
                 foreach ($message as $msg) {
-                    echo '<div class="message"><p>' . htmlspecialchars($msg) . '</p></div>';
+                    echo '<div class="' . (strpos($msg, 'thành công') !== false ? 'success-message' : 'message') . '"><p>' . htmlspecialchars($msg) . '</p></div>';
                 }
             }
             ?>
@@ -240,7 +285,7 @@ if (isset($_POST['submit-btn']) && isset($_POST['csrf_token']) && $_POST['csrf_t
     </section>
     <script>
         setTimeout(() => {
-            document.querySelectorAll('.message').forEach(msg => msg.remove());
+            document.querySelectorAll('.message, .success-message').forEach(msg => msg.remove());
         }, 3000);
     </script>
 </body>
