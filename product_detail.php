@@ -98,6 +98,8 @@ if (isset($_POST['add_to_cart'])) {
             <?php endif; ?>
         </div>
         <p class="text-gray-600 mb-4"><strong>Description:</strong> <?php echo htmlspecialchars($product['product_detail'] ?: 'No description available.'); ?></p>
+        <p>Category: <?php echo htmlspecialchars($product['type']); ?></p>
+        <p>Origin: <?php echo htmlspecialchars($product['origin']); ?></p>
         <form method="POST" class="actions-form">
                                         <input type="hidden" name="pid" value="<?php echo $product['id']; ?>">
                                         <input type="hidden" name="name" value="<?php echo htmlspecialchars($product['name']); ?>">
