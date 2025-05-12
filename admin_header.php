@@ -262,7 +262,7 @@ if (isset($_POST['logout'])) {
 <body>
     <header class="header">
         <nav class="navbar">
-            <a href="admin.php" class="logo">Luxe Blossom Admin</a>
+            <a href="admin.php" class="logo">Flora & Life Admin</a>
             <div class="nav-links" id="nav-links">
                 <a href="admin.php" <?php echo basename($_SERVER['PHP_SELF']) == 'admin.php' ? 'class="active"' : ''; ?>><i class="fas fa-home"></i> Dashboard</a>
                 <a href="admin_product.php" <?php echo basename($_SERVER['PHP_SELF']) == 'admin_product.php' ? 'class="active"' : ''; ?>><i class="fas fa-box"></i> Products</a>
