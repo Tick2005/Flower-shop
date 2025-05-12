@@ -3,7 +3,7 @@
 -- https://www.phpmyadmin.net/
 --
 -- Host: 127.0.0.1
--- Generation Time: May 11, 2025 at 12:53 PM
+-- Generation Time: May 12, 2025 at 04:57 AM
 -- Server version: 10.4.32-MariaDB
 -- PHP Version: 8.2.12
 
@@ -44,8 +44,9 @@ CREATE TABLE `cart` (
 --
 
 INSERT INTO `cart` (`id`, `user_id`, `pid`, `name`, `price`, `quantity`, `image`, `created_at`, `updated_at`) VALUES
-(3, 605250002, 21, 'White Lily Bridal Bouquet', 90.00, 1, '21.jpg', '2025-05-10 10:10:00', '2025-05-10 10:10:00'),
-(4, 605250002, 31, 'Red Rose Bouquet', 65.00, 3, '31.jpg', '2025-05-10 10:15:00', '2025-05-10 10:15:00');
+(20, 605250001, 2, 'Succulent Lady Planter', 63.36, 2, '2.jpg', '2025-05-11 17:57:40', '2025-05-11 17:57:47'),
+(29, 1105250001, 33, 'Pink Mixed Flower Bouquet', 0.00, 1, '33.jpg', '2025-05-12 09:52:49', '2025-05-12 09:52:49'),
+(30, 1105250001, 24, 'Pink Rose Handheld Bouquet', 0.00, 1, '24.jpg', '2025-05-12 09:52:50', '2025-05-12 09:52:50');
 
 -- --------------------------------------------------------
 
@@ -79,7 +80,12 @@ INSERT INTO `orders` (`id`, `user_id`, `product_id`, `name`, `number`, `email`, 
 (605250002, 605250002, 2, 'Jane Smith', '0987654321', 'jane@example.com', 'Bank Transfer', '456 Oak Street', 120.00, '2025-05-06 13:05:59', 'confirmed', 'approved', '2025-05-06 13:05:59', '2025-05-11 16:41:13'),
 (1105250001, 605250001, 11, 'Duong', '0338756467', 'username@gmail.com', 'COD', 'xxxx', 85.00, '2025-05-11 17:49:24', 'pending', 'pending', '2025-05-11 17:49:24', '2025-05-11 17:49:24'),
 (1105250002, 605250001, 15, 'Duong', '0338756467', 'username@gmail.com', 'COD', 'xxxx', 130.00, '2025-05-11 17:49:24', 'pending', 'pending', '2025-05-11 17:49:24', '2025-05-11 17:49:24'),
-(1105250003, 605250001, 3, 'Phan Văn Dương', '0338756467', '523h0017@student.tdtu.edu.vn', 'COD', 'xxxx', 79.00, '2025-05-11 17:51:44', 'pending', 'pending', '2025-05-11 17:51:44', '2025-05-11 17:51:44');
+(1105250003, 605250001, 3, 'Phan Văn Dương', '0338756467', '523h0017@student.tdtu.edu.vn', 'COD', 'xxxx', 79.00, '2025-05-11 17:51:44', 'pending', 'rejected', '2025-05-11 17:51:44', '2025-05-11 18:15:53'),
+(1105250004, 605250002, 21, 'Duong', '0338756467', 'username@gmail.com', 'COD', 'xxxx', 90.00, '2025-05-11 18:10:22', 'pending', 'pending', '2025-05-11 18:10:22', '2025-05-11 18:10:22'),
+(1105250005, 605250002, 31, 'Duong', '0338756467', 'username@gmail.com', 'COD', 'xxxx', 195.00, '2025-05-11 18:10:22', 'pending', 'pending', '2025-05-11 18:10:22', '2025-05-11 18:10:22'),
+(1105250006, 1105250001, 7, 'Phan Văn Dương', '0338756467', 'phanvanduong1223456@gmail.com', 'COD', 'xxxx', 87.00, '2025-05-11 20:14:09', 'confirmed', 'approved', '2025-05-11 20:14:09', '2025-05-11 20:15:00'),
+(1205250001, 1105250001, 7, 'Phan Văn Dương', '0338756467', 'phanvanduong1223456@gmail.com', 'Bank Transfer', 'xxxx', 174.00, '2025-05-12 09:42:29', 'pending', 'pending', '2025-05-12 09:42:29', '2025-05-12 09:42:29'),
+(1205250002, 1105250001, 22, 'Phan Văn Dương', '0338756467', 'phanvanduong1223456@gmail.com', 'Bank Transfer', 'xxxx', 55.00, '2025-05-12 09:42:29', 'pending', 'pending', '2025-05-12 09:42:29', '2025-05-12 09:42:29');
 
 --
 -- Triggers `orders`
@@ -136,7 +142,10 @@ CREATE TABLE `order_status_log` (
 --
 
 INSERT INTO `order_status_log` (`log_id`, `order_id`, `old_payment_status`, `new_payment_status`, `old_approval_status`, `new_approval_status`, `changed_at`) VALUES
-(1, 605250002, 'pending', 'confirmed', 'pending', 'approved', '2025-05-06 13:05:59');
+(1, 605250002, 'pending', 'confirmed', 'pending', 'approved', '2025-05-06 13:05:59'),
+(2, 1105250003, 'pending', 'pending', 'pending', 'rejected', '2025-05-11 18:15:53'),
+(3, 1105250006, 'pending', 'confirmed', 'pending', 'pending', '2025-05-11 20:14:48'),
+(4, 1105250006, 'confirmed', 'confirmed', 'pending', 'approved', '2025-05-11 20:15:00');
 
 -- --------------------------------------------------------
 
@@ -279,9 +288,10 @@ CREATE TABLE `users` (
 --
 
 INSERT INTO `users` (`id`, `name`, `email`, `password`, `status`, `user_type`, `created_at`, `updated_at`, `verification_code`, `verified`) VALUES
-(605250001, 'John Doe', 'john@example.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Online', 'user', '2025-05-06 13:05:59', '2025-05-10 17:49:58', NULL, 0),
-(605250002, 'Jane Smith', 'jane@example.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Offline', 'user', '2025-05-06 13:05:59', '2025-05-06 20:09:51', NULL, 0),
-(605250003, 'Admin User', 'admin@example.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Offline', 'admin', '2025-05-06 13:05:59', '2025-05-10 15:55:39', NULL, 0);
+(605250001, 'John Doe', 'john@example.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Offline', 'user', '2025-05-06 13:05:59', '2025-05-11 18:06:49', NULL, 0),
+(605250002, 'Jane Smith', 'jane@example.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Online', 'user', '2025-05-06 13:05:59', '2025-05-12 09:44:30', NULL, 1),
+(605250003, 'Admin User', 'admin@example.com', '$2y$10$mBYFC.xN9ZWuVMjt9hSTLuP6X3YEX7x2jAAGE6wrxTtDb19aYyk/G', 'Online', 'admin', '2025-05-06 13:05:59', '2025-05-12 09:57:19', NULL, 1),
+(1105250001, 'Phan Văn Dương', 'phanvanduong1223456@gmail.com', '$2y$10$Xzx0bxOd7nKrkvq5HtpDLe5/LpoCI7os9S462KIOrPHYneYLvuM9i', 'Offline', 'user', '2025-05-11 18:35:24', '2025-05-12 09:53:41', NULL, 1);
 
 --
 -- Triggers `users`
@@ -366,13 +376,13 @@ ALTER TABLE `users`
 -- AUTO_INCREMENT for table `cart`
 --
 ALTER TABLE `cart`
-  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=20;
+  MODIFY `id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=31;
 
 --
 -- AUTO_INCREMENT for table `order_status_log`
 --
 ALTER TABLE `order_status_log`
-  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=2;
+  MODIFY `log_id` int(11) NOT NULL AUTO_INCREMENT, AUTO_INCREMENT=5;
 
 --
 -- AUTO_INCREMENT for table `products`
