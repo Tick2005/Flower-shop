@@ -54,26 +54,6 @@ The application is built using **PHP**, **MySQL**, **Bootstrap**, and **JavaScri
 - ✅ Bootstrap-based UI for responsiveness
 - ✅ Session Management with PHP
 
----
-
-## 📸 Screenshots
-
-> *(Screenshots should be added in the `screenshots/` folder)*
-
-- **Homepage**
-  ![](screenshots/homepage.png)
-
-- **Product Details**
-  ![](screenshots/product-details.png)
-
-- **Shopping Cart**
-  ![](screenshots/cart.png)
-
-- **Admin Dashboard**
-  ![](screenshots/admin-dashboard.png)
-
----
-
 ## 🛠️ Installation
 
 Follow these steps to set up the project locally:
@@ -109,4 +89,6 @@ In file connection.php, update your database credentials:
 ## 🧪 Usage & Examples
 
 ### Homepage
+
+
 
