@@ -20,7 +20,6 @@ Welcome to the **Flower Shop Web Application** — a complete e-commerce platfor
 - [License](#license)
 - [Changelog](#changelog)
 - [Known Issues](#known-issues)
-- [Badges](#badges)
 
 ---
 
@@ -84,13 +83,22 @@ In file connection.php, update your database credentials:
 ### 4. Start Local Server
 
 - Open XAMPP and start Apache and SQL
-- Navigate http://localhost/flower-shop/index.php
+- Navigate http://localhost/flower-shop/index.php to view contribution page.
 
 ## 🧪 Usage & Examples
 
+### Contribution page : index.php
+
+In here, you can see such as: view product , about for us, and list product is interested by all customer for us.
+
+![Display product detail](image/image13.png)
+
+- If you want order or add product to cart , you should click on user icon to login account.
+- And if you don't have account you can navigate from login page to regidter page by click on "Register here".
+
 ### Homepage
 
-- The homepage displays featured products and categories.
+- After login, you in homepage displays featured products and categories.
 
 ![Display product detail](image/image1.png)
   
@@ -98,7 +106,8 @@ In file connection.php, update your database credentials:
 
 - Users can browse products by category (e.g., Birthday Flowers, Wedding Flowers).
 
-
+![Select product type](image/image11.png)
+![Display product detail](image/image12.png)
 
 - Each product card displays the product image, name, price, and a button to add to the cart.
 
@@ -109,7 +118,7 @@ In file connection.php, update your database credentials:
 
 - Users can view their cart, adjust quantities, and remove items.
 - The total price is calculated based on the items in the cart.
-- 
+
 ![Display cart](image/image5.png)
 
 
@@ -119,17 +128,36 @@ In file connection.php, update your database credentials:
 
 ![Display checkout](image/image4.png)
 
-- After placing an order, users receive a confirmation message.
-
 ### Admin Dashboard
 
 - Admins can manage products, view orders, and handle user accounts.
-
-  
-
 - The dashboard provides insights into sales and user activity.
-
   
+![Display manage products](image/image7.png)
+![Display manage user](image/image8.png)
+![Display manage orders](image/image9.png)
+
+## 🤝 Contributing
+
+We welcome contributions to the Flower Shop Web Application! To contribute, please follow these steps:
+
+1. **Fork the Repository**: Click on the "Fork" button at the top right of the repository page.
+2. **Clone Your Fork**: Clone your forked repository to your local machine.
+   ```bash
+   git clone https://github.com/your-username/Flower-shop.git
+   cd Flower-shop
+   ```
+3. **Create a New Branch**: Create a new branch for your feature or bug fix.
+   
+   ```bash
+   git checkout -b feature/YourFeature
+   ```
+4. **Make Your Changes**: Implement your changes and test them thoroughly.
+5. **Commit Your Changes**: Commit your changes with a descriptive message  
+```bash
+git commit -m 'Add some feature'
+```
+7. Open a Pull Request: Go to the original repository and click on "New Pull Request." Select your branch and submit the pull request.
 
 ## 📦 Dependencies
 
@@ -138,15 +166,6 @@ In file connection.php, update your database credentials:
 - Bootstrap: Front-end framework for responsive design.
 - PHPMailer: Library for sending emails.
 
-## 🤝 Contributing
-
-Contributions are welcome! Please follow these steps:
-
-1. Fork the repository.
-2. Create a new branch (git checkout -b feature/YourFeature).
-3. Make your changes and commit them (git commit -m 'Add some feature').
-4. Push to the branch (git push origin feature/YourFeature).
-5. Open a pull request.
 
 ## 🛠️ Troubleshooting & FAQ
 
@@ -158,14 +177,22 @@ Contributions are welcome! Please follow these steps:
     + A: Use the "Forgot Password" feature on the login page to reset your password.
 
  ## 📞 Support
- 
-For support, please contact us at: 523H0017@student.tdtu.vn , 523H002@student.tdtu.edu.vn, 523H0025@student.tdtu.edu.vn, 523H0035@student.tdtu.edu.vn, 523H0074@student.tdtu.edu.vn.
+
+For support, please contact us at the following email addresses:
+
+- 523H0017@student.tdtu.vn
+- 523H002@student.tdtu.edu.vn
+- 523H0025@student.tdtu.edu.vn
+- 523H0035@student.tdtu.edu.vn
+- 523H0074@student.tdtu.edu.vn
+
+We are here to help you with any questions or issues you may have regarding the Flower Shop Web Application.
 
 ## 📚 References
 
-- PHP Documentation
-- MySQL Documentation
-- Bootstrap Documentation
+- [PHP Documentation](https://www.php.net/docs.php) - Official documentation for PHP, including tutorials and function references.
+- [MySQL Documentation](https://dev.mysql.com/doc/) - Comprehensive guide to MySQL, covering installation, configuration, and SQL syntax.
+- [Bootstrap Documentation](https://getbootstrap.com/docs/) - Official Bootstrap documentation, providing examples and guidelines for using the framework.
 
 ## 📝 License
 
