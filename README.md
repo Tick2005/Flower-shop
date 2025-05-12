@@ -92,31 +92,44 @@ In file connection.php, update your database credentials:
 
 - The homepage displays featured products and categories.
 
-![Display product](image/image.png)(image/image1.png)
-   
-- Users can search for flowers using the search bar.
-
+![Display product detail](image/image1.png)
+  
 ### Product Browsing
 
 - Users can browse products by category (e.g., Birthday Flowers, Wedding Flowers).
-  
+
+
+
 - Each product card displays the product image, name, price, and a button to add to the cart.
+
+![Display product](image/image.png)
+![Display product detail](image/image1.png)
 
 ### Shopping Cart
 
 - Users can view their cart, adjust quantities, and remove items.
-
 - The total price is calculated based on the items in the cart.
+- 
+![Display cart](image/image5.png)
+
 
 ### Checkout Process
 
 - Users can proceed to checkout, fill in their shipping information, and select a payment method.
+
+![Display checkout](image/image4.png)
+
 - After placing an order, users receive a confirmation message.
 
 ### Admin Dashboard
 
 - Admins can manage products, view orders, and handle user accounts.
+
+  
+
 - The dashboard provides insights into sales and user activity.
+
+  
 
 ## 📦 Dependencies
 
