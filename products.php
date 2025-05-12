@@ -455,7 +455,6 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
                         <a href="products.php?type=other">Other</a>
                     </div>
                 </div>
-                <a href="./customer.php" class="text-gray-700 hover:text-green-500">Home</a>
                 <div class="relative dropdown">
                     <a href="#" class="text-gray-700 hover:text-green-500 flex items-center space-x-2">
                         <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -522,9 +521,6 @@ $types = ['birthday', 'wedding', 'condolence', 'bouquet', 'basket', 'other'];
                         <div class="product-card" data-product-id="<?php echo $product['id']; ?>">
                             <img src="image/<?php echo htmlspecialchars($product['image']); ?>" alt="<?php echo htmlspecialchars($product['name']); ?>">
                             <h3><?php echo htmlspecialchars($product['name']); ?></h3>
-                            <p>Category: <?php echo htmlspecialchars($category_map[$product['type']]); ?></p>
-                            <p>Origin: <?php echo htmlspecialchars($product['origin']); ?></p>
-                            <p class="text-sm text-gray-500"><?php echo htmlspecialchars($product['product_detail']); ?></p>
                             <p class="price">
                                 <?php 
                                 echo number_format($product['discounted_price'], 2, ',', ','); 
