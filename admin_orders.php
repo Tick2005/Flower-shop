@@ -83,7 +83,7 @@ function sendOrderEmail($to, $name, $order_id, $status, $total_price) {
         $mail->Subject = "Order Confirmed - Flora&Life (Order #$order_id)";
         
         if ($status === 'confirmed') {
-            $body = "Dear $name,\n\nYour order #$order_id has been successfully confirmed.\nTotal: $$total_price\n\nThank you for shopping with Luxe Blossom!\n\nBest regards,\nFlora&Life Team";
+            $body = "Dear $name,\n\nYour order #$order_id has been successfully confirmed.\nTotal: $$total_price\n\nThank you for shopping with Flora & Life!\n\nBest regards,\nFlora&Life Team";
         } else {
             $body = "Dear $name,\n\nYour order #$order_id has failed to process.\nTotal: $$total_price\nPlease try again or contact support.\n\nBest regards,\nFlora&Life Team";
         }
