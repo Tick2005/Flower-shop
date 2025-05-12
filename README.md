@@ -91,7 +91,9 @@ In file connection.php, update your database credentials:
 ### Homepage
 
 - The homepage displays featured products and categories.
-  
+
+![Display product](image/image.png)(image/image1.png)
+   
 - Users can search for flowers using the search bar.
 
 ### Product Browsing
@@ -148,9 +150,9 @@ For support, please contact us at: 523H0017@student.tdtu.vn , 523H002@student.td
 
 ## 📚 References
 
-PHP Documentation
-MySQL Documentation
-Bootstrap Documentation
+- PHP Documentation
+- MySQL Documentation
+- Bootstrap Documentation
 
 ## 📝 License
 
