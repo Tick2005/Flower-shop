@@ -181,7 +181,7 @@ git commit -m 'Add some feature'
 For support, please contact us at the following email addresses:
 
 - 523H0017@student.tdtu.vn
-- 523H002@student.tdtu.edu.vn
+- 523H0002@student.tdtu.edu.vn
 - 523H0025@student.tdtu.edu.vn
 - 523H0035@student.tdtu.edu.vn
 - 523H0074@student.tdtu.edu.vn
